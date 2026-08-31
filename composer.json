@@ -1,6 +1,6 @@
 {
-    "name": "andre/baseapp",
-    "description": "Projeto base (framework proprio) em PHP puro: MVC, RBAC, multi-tenant opcional, auditoria e middlewares. Sem regras de negocio - ponto de partida para novos projetos.",
+    "name": "appfinance/appfinance",
+    "description": "Sistema financeiro mobile-first em PHP puro, MVC, RBAC e compatível com hospedagem compartilhada.",
     "type": "project",
     "license": "proprietary",
     "require": {
