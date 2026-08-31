@@ -1,0 +1,19 @@
+{
+  "name": "APPFINANCE — Controle financeiro",
+  "short_name": "APPFINANCE",
+  "description": "Controle simples de receitas, despesas, contas e investimentos.",
+  "lang": "pt-BR",
+  "start_url": "/dashboard",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f6f9fc",
+  "theme_color": "#0f4c81",
+  "orientation": "portrait-primary",
+  "icons": [
+    { "src": "/assets/icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Novo lançamento", "short_name": "Lançar", "url": "/lancamentos/novo", "icons": [{ "src": "/assets/icons/icon.svg", "sizes": "any", "type": "image/svg+xml" }] },
+    { "name": "Contas", "short_name": "Contas", "url": "/contas", "icons": [{ "src": "/assets/icons/icon.svg", "sizes": "any", "type": "image/svg+xml" }] }
+  ]
+}
