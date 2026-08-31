@@ -68,6 +68,8 @@ try {
     $investment = (new Investment())->findForUser($investmentIds[0], $userId);
     check($investment !== null, 'aplicação é vinculada ao usuário correto');
     check(abs((float) $account->findForUser($accountIds[0], $userId)->current_balance - 2300.00) < 0.01, 'aplicação reduz a conta de origem');
+    (new InvestmentService())->redeem($userId, $investmentIds[0], ['amount' => '100.00', 'movement_date' => date('Y-m-d'), 'notes' => 'Teste de resgate']);
+    check(abs((float) $account->findForUser($accountIds[0], $userId)->current_balance - 2400.00) < 0.01, 'resgate devolve valor à conta de origem');
 
     $summary = (new Transaction())->summary($userId, date('Y-m-01'), date('Y-m-t'));
     check(abs((float) $summary->income - 2500.00) < 0.01, 'dashboard soma receitas recebidas');
