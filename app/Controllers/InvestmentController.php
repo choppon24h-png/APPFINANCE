@@ -39,6 +39,24 @@ class InvestmentController extends Controller
         $this->redirect('/investimentos');
     }
 
+    public function redeemForm(string $id): void
+    {
+        $investment = (new Investment())->findForUser(FinanceInput::intId($id, 'Investimento', true), $this->userId());
+        if (!$investment) { $this->flash('error', 'Investimento não encontrado.'); $this->redirect('/investimentos'); }
+        $this->view('investments/redeem', ['title' => 'Resgatar investimento', 'investment' => $investment]);
+    }
+
+    public function redeem(string $id): void
+    {
+        try {
+            $id = FinanceInput::intId($id, 'Investimento', true);
+            (new InvestmentService())->redeem($this->userId(), $id, $_POST);
+            AuditLogger::log('create', 'investment_redemption', $id, ['amount' => $_POST['amount'] ?? null]);
+            $this->flash('success', 'Resgate registrado e devolvido à conta de origem.');
+        } catch (Throwable $e) { $this->flash('error', $e instanceof \InvalidArgumentException ? $e->getMessage() : 'Não foi possível registrar o resgate.'); }
+        $this->redirect('/investimentos');
+    }
+
     public function returnForm(string $id): void
     {
         $investment = (new Investment())->findForUser(FinanceInput::intId($id, 'Investimento', true), $this->userId());
