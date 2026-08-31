@@ -1,130 +1,101 @@
-# BASEAPP
+# APPFINANCE
 
-Projeto base em PHP puro (sem framework de terceiros) para servir como ponto de
-partida de qualquer novo projeto. Foi extraído da arquitetura do VOXEL B.I.,
-removendo **toda** a regra de negócio (radiologia, PACS, exames, financeiro,
-SLA, planos etc.) e mantendo apenas a estrutura, a linguagem e os mecanismos:
-MVC próprio, RBAC orientado a banco, multi-tenant opcional, middlewares,
-auditoria, sessão e autoloading compatível com hospedagem compartilhada.
+Sistema financeiro pessoal e empresarial simples, responsivo e mobile-first, construído em PHP 8.x, MySQL/MariaDB, HTML5, CSS3 e JavaScript, com foco em hospedagem compartilhada Apache/HostGator. A aplicação mantém o framework MVC próprio herdado do projeto-base e evolui sua estrutura sem dependências que exijam Node.js ou processos permanentes no servidor.
 
-Use este repositório como "template inicial" para novos projetos: copie a
-pasta, troque o nome da aplicação e comece a adicionar as telas/Controllers
-do domínio específico de cada projeto.
+> **Estado da configuração de produção:** o projeto não está conectado ao banco de produção. As credenciais reais da HostGator deverão ser informadas somente após a validação da estrutura, das migrations e dos testes locais.
 
-## Por que um framework próprio (e não Laravel/Symfony)?
+## Diagnóstico técnico inicial
 
-Este esqueleto prioriza rodar em qualquer hospedagem PHP simples (inclusive
-compartilhada, sem SSH root e sem conseguir rodar `composer install` no
-servidor), com zero dependências obrigatórias em runtime. O autoload é um
-`spl_autoload_register` PSR-4 manual e o `.env` é lido por uma função própria
-— nada disso depende do Composer estar disponível em produção.
+A auditoria foi realizada antes da implementação da evolução solicitada. O projeto atual é um esqueleto MVC em PHP puro, com autoload PSR-4 manual, roteador próprio, PDO para MySQL/MariaDB, autenticação por sessão, RBAC orientado a banco, suporte opcional a multi-tenant, CSRF, auditoria e um endpoint específico de consulta de CNPJ.
 
-## Estrutura
+| Área auditada | Situação encontrada | Impacto para a evolução |
+|---|---|---|
+| Linguagem | PHP 8.1 ou superior, com HTML, CSS e JavaScript | Compatível com PHP 8.x da HostGator |
+| Framework | Nenhum framework de terceiros; MVC e Router próprios | Preservar a base reduz dependências e simplifica o deploy |
+| Banco | PDO com MySQL/MariaDB, prepared statements e `utf8mb4` | Adicionar migrations versionadas e índices financeiros |
+| Tabelas | `roles`, `permissions`, `role_permissions`, `users`, `tenants`, `user_tenants`, `audit_logs`, `cnpj_cache` e `cnpj_rate_limit` | Não havia tabelas de contas, lançamentos, recorrências ou investimentos |
+| Autenticação | Login/logout por sessão, `password_hash`/`password_verify`, role e permissões | Reaproveitar e reforçar isolamento por `user_id` |
+| Rotas | Login, seleção de empresa, dashboard, usuários e CNPJ | Criar rotas autenticadas para dashboard, lançamentos, contas, investimentos, cadastros e relatórios |
+| Dashboard | Placeholder com contagem de usuários | Substituir por indicadores financeiros agregados |
+| Interface | Bootstrap via CDN, sidebar fixa e CSS mínimo | Adotar layout mobile-first, navegação adaptativa e lançamento rápido |
+| APIs | `GET /api/cnpj/{cnpj}` com fallback, cache, rate-limit e auditoria | Preservar o endpoint e adicionar APIs financeiras em PHP |
+| Instalação | `_instalar.php` executava somente a migration principal e o seed administrativo | Atualizar o instalador para executar todas as migrations/seed versionados |
+| Deploy | `.htaccess`, document root em `public/` e armazenamento de sessão em `storage/` | Manter o modelo compatível com Apache compartilhado |
 
-```
+### Funcionalidades preservadas
+
+A evolução preserva o autoload manual, a conexão PDO, o roteador com grupos e middlewares, a autenticação existente, o RBAC, o suporte opcional a tenants, o registro de auditoria, a consulta de CNPJ e os scripts de diagnóstico e instalação. O CRUD de usuários continua disponível para perfis com a permissão `manage_users`.
+
+### Problemas encontrados
+
+O projeto inicial não possuía domínio financeiro implementado: não havia contas, categorias, centros de custo, lançamentos, recorrências, investimentos, rendimentos, transferências, relatórios ou regras de atualização de saldo. O dashboard era apenas uma tela demonstrativa, a navegação apresentava somente duas áreas e o CSS não contemplava os requisitos mobile-first, PWA, gráficos, filtros e cards responsivos.
+
+Também foi identificado que o instalador não executava automaticamente a migration de CNPJ, que não existia uma camada de serviço financeiro, que não havia paginação ou consultas agregadas do domínio, e que o isolamento de dados financeiros por usuário ainda precisava ser aplicado em todas as queries novas. A conexão com produção permanece intencionalmente pendente.
+
+## Arquitetura proposta
+
+A arquitetura evoluída mantém o MVC simples e acrescenta uma camada de domínio compatível com hospedagem compartilhada:
+
+```text
+public/
+  index.php                 Front controller
+  assets/css/app.css        Design system mobile-first
+  assets/js/app.js          Interações globais, gráficos e navegação
+  assets/js/cnpj-lookup.js  Módulo CNPJ preservado
+  manifest.json             Metadados PWA
+  sw.js                     Service worker sem backend permanente
 app/
-  Controllers/     Controllers HTTP (fino: valida input, chama Model, escolhe View)
-  Core/             Núcleo do framework — não deve ganhar regra de negócio
-    Router.php          Roteador com suporte a grupos, prefixo e middleware por rota
-    Controller.php       Classe base (view/json/redirect/csrfToken)
-    Model.php             Classe base (PDO + helpers de escopo multi-tenant)
-    Database.php          Conexão PDO singleton
-    Auth.php               Login/logout/sessão/permissões do usuário logado
-    Permission.php         RBAC: consulta roles/permissions no banco
-    Middleware.php         Classe base + executor de middlewares
-    TenantContext.php      Contexto de multi-tenant (opcional)
-    View.php                Renderização de views com layout (header/footer)
-    Logger.php               Log em arquivo (storage/logs/app.log)
-    Audit/AuditLogger.php     Log de auditoria em banco (audit_logs)
-  Middlewares/       Auth, Csrf, Permission, SuperAdmin, SessionTimeout, Tenant
-  Models/             User, Role, Tenant (só estrutura, sem entidades de negócio)
-  Views/              Views PHP simples (sem template engine), layout com Bootstrap 5
-config/               config/database.php
-database/
-  migrations/         Schema base (roles, permissions, users, tenants, audit_logs)
-  seeds/               Superadmin inicial + permissões mínimas
-public/               Document root (index.php, assets)
-routes/web.php         Todas as rotas da aplicação
-storage/                logs, sessões, uploads
+  Controllers/              Entrada HTTP, validação e resposta
+  Core/                     Router, PDO, Auth, View, CSRF e auditoria
+  Models/                   Entidades e consultas orientadas a PDO
+  Services/                 Regras de saldo, recorrência e investimentos
+  Views/                    Layouts, dashboard e telas de domínio
+config/                     Configurações sem credenciais
+routes/                     Rotas HTML e API
+ database/
+  migrations/               SQL versionado e idempotente
+  seeds/                    Dados demonstrativos não reais
+storage/                    Logs, sessões e uploads fora do público
 ```
 
-## RBAC (controle de acesso)
+As novas entidades financeiras devem sempre conter `user_id`, utilizar prepared statements, validar todos os identificadores recebidos, limitar resultados e aplicar o escopo do usuário na consulta. O saldo disponível será calculado com base em saldo inicial e movimentações efetivadas: despesas pendentes não reduzem o saldo, receitas previstas não aumentam o saldo e transferências entre contas não entram como receita ou despesa.
 
-Não existe nenhuma permissão de negócio "hardcoded" em PHP. Tudo vem do banco:
+## Escopo funcional da evolução
 
-- `roles` — ex: `superadmin`, `admin`, `user` (crie quantas quiser por projeto)
-- `permissions` — ex: `manage_users`, `view_dashboard` (crie as do seu domínio)
-- `role_permissions` — associação N:N entre role e permissão
+A aplicação terá uma tela única de **Novo Lançamento** para receitas e despesas, com recorrência opcional e campos avançados recolhíveis. Também contará com contas financeiras, categorias, centros de custo, lançamentos com status e filtros, recorrências sem duplicidade, investimentos, aplicações, resgates, rendimentos manuais, rankings baseados exclusivamente nos dados cadastrados pelo usuário, fluxo de caixa, relatórios e exportação CSV/PDF quando compatível com a hospedagem.
 
-A role com slug `superadmin` sempre tem acesso total (curinga), tanto em
-`Auth::can()` quanto em `Permission::can()`. Para proteger uma rota:
+O dashboard apresentará saldo total, receitas, despesas, resultado do mês, total investido, rendimentos, evolução mensal, composição de despesas, maiores receitas, próximos vencimentos, alertas calculados e comparação de rentabilidade absoluta e percentual. Nenhuma afirmação sobre bancos externos será feita sem fonte ou integração externa autorizada.
 
-```php
-Router::get('/algo', 'AlgoController@index', [[PermissionMiddleware::class, 'ver_algo']]);
-```
+## Banco de dados e migrations
 
-Para checar dentro de um Controller/View: `Auth::can('ver_algo')`.
+A migration base existente continua sendo a origem das tabelas de autenticação, RBAC, multi-tenant e auditoria. As migrations financeiras serão adicionadas em arquivos SQL sequenciais e idempotentes, com chaves estrangeiras e índices para `user_id`, `account_id`, `category_id`, `cost_center_id`, `transaction_date`, `due_date` e `status`.
 
-## Multi-tenant (opcional)
+As credenciais da produção não são armazenadas no GitHub. Para instalação, copie `.env.example` para `.env`, preencha apenas o ambiente escolhido e execute o instalador protegido ou os arquivos SQL pelo phpMyAdmin. O arquivo `.env` está ignorado pelo Git.
 
-O framework já vem com suporte a multi-tenant (`tenants`, `user_tenants`,
-`TenantContext`, `TenantMiddleware`), mas ele é **inerte por padrão**: se
-você nunca associar um usuário a um tenant (tabela `user_tenants` vazia), o
-`TenantMiddleware` simplesmente não bloqueia nada e a aplicação funciona
-como single-tenant normal.
+## Segurança
 
-Se o seu projeto não vai precisar de multi-tenant, você pode remover:
-`app/Core/TenantContext.php`, `app/Middlewares/TenantMiddleware.php`,
-`app/Models/Tenant.php`, as tabelas `tenants`/`user_tenants` e as rotas
-`/selecionar-empresa`.
+O sistema utiliza `password_hash`, `password_verify`, prepared statements com emulação desativada, escape de saída HTML, token CSRF em formulários de escrita, cookies de sessão `HttpOnly`/`SameSite`, headers básicos de segurança, auditoria e autorização por usuário. Toda query financeira deverá filtrar pelo usuário autenticado e toda operação de escrita relevante deverá registrar auditoria.
 
-## Como iniciar um novo projeto a partir deste template
+## Desenvolvimento local
 
-1. Copie a pasta `baseapp` e renomeie para o novo projeto.
-2. Ajuste `composer.json` (`name`, `description`).
-3. Copie `.env.example` para `.env` e preencha `DB_*`, `APP_NAME`, `APP_URL`, `APP_SECRET`.
-4. Crie o banco e rode, nesta ordem:
-   - `database/migrations/0001_core_schema.sql`
-   - `database/seeds/0001_admin_seed.sql`
-   - (ou acesse `public/_instalar.php?key=SEU_APP_SECRET` para rodar os dois
-     direto pelo navegador — veja `DEPLOY_HOSTGATOR.md`)
-5. Suba o conteúdo para o servidor com o *document root* apontando para `public/`
-   (ou use o `.htaccess` da raiz se o document root for a raiz do projeto,
-   como em hospedagem compartilhada — passo a passo completo em `DEPLOY_HOSTGATOR.md`).
-6. Acesse `/login` com `admin@example.com` / `Admin@123` e **troque a senha
-   imediatamente** (crie uma tela de "alterar senha" ou atualize direto no banco).
-7. Apague `public/_instalar.php` e `public/_diagnostico.php` do servidor.
-8. Comece a adicionar os Controllers/Models/Views/migrations do domínio do
-   novo projeto — o núcleo em `app/Core` não deveria precisar mudar.
+1. Copie `.env.example` para `.env` e configure um banco MySQL/MariaDB local.
+2. Execute `database/migrations/0001_core_schema.sql`, as migrations financeiras em ordem e os seeds.
+3. Aponte o document root do Apache para `public/` ou utilize o `.htaccess` da raiz em um ambiente compatível.
+4. Para PHP embutido em desenvolvimento, execute `php -S localhost:8000 -t public public/index.php`.
+5. Acesse `/login` e altere imediatamente a senha do usuário administrativo inicial quando o seed for utilizado.
 
-## Hospedagem compartilhada (HostGator/cPanel)
+## HostGator/cPanel
 
-Veja o passo a passo completo em [`DEPLOY_HOSTGATOR.md`](./DEPLOY_HOSTGATOR.md):
-upload via Gerenciador de Arquivos, criação do banco, `.env`, permissões de
-pasta, versão do PHP, e os dois scripts de apoio inclusos em `public/`:
+Consulte [`DEPLOY_HOSTGATOR.md`](./DEPLOY_HOSTGATOR.md) para upload, configuração do document root, criação do banco, permissões de `storage/`, versão do PHP, HTTPS e limpeza dos scripts de instalação/diagnóstico após o uso. O sistema foi desenhado para funcionar sem Docker, Redis, workers ou servidor Node permanente.
 
-- `_instalar.php` — roda migration + seed direto no navegador (sem precisar
-  de phpMyAdmin), protegido pela sua `APP_SECRET`.
-- `_diagnostico.php` — checa versão do PHP, extensões, permissões de pasta e
-  conexão com o banco numa tela só, também protegido pela `APP_SECRET`.
+### CONFIGURAÇÃO DO BANCO DE PRODUÇÃO PENDENTE
 
-Apague os dois do servidor depois de usar.
+A configuração real do banco da HostGator ainda não foi conectada. Quando as migrations, a interface e os testes estiverem validados, o sistema estará pronto para receber as credenciais de produção.
 
-## Convenções
+## Qualidade e testes
 
-- Controllers ficam finos: validam entrada, chamam Model/Service, escolhem a View.
-- Models estendem `App\Core\Model` e usam PDO com *prepared statements* (nunca
-  concatenar SQL vindo do usuário).
-- Toda rota protegida deve passar por `AuthMiddleware`; ações sensíveis por
-  `PermissionMiddleware`; painéis globais por `SuperAdminMiddleware`.
-- Toda ação de escrita relevante deve chamar `AuditLogger::log(...)`.
-- Formulários POST devem incluir `<input type="hidden" name="_csrf_token" ...>`
-  e as rotas de escrita devem registrar `CsrfMiddleware`.
+Os testes devem cobrir autenticação, isolamento por usuário, criação e edição de contas, receitas, despesas, recorrências, pagamentos, investimentos, rendimentos, transferências, cálculos do dashboard, filtros, exportação e visualização em desktop, tablet e celular. Também devem verificar que uma transferência entre contas não é contabilizada como receita ou despesa.
 
-## Próximos passos sugeridos (não incluídos de propósito)
+## Repositório original
 
-Ficaram de fora por serem decisões específicas de cada projeto, não parte do
-"esqueleto": fluxo de recuperação de senha, tela de administração de
-roles/permissions, envio de e-mail, testes automatizados, exportação para
-Excel/PDF, filas/jobs em background. Adicione-os conforme a necessidade de
-cada novo projeto.
+O repositório `ASOARESBH/phppadrao` foi usado apenas como origem da base. O desenvolvimento ocorre de forma independente neste repositório `APPFINANCE`; o projeto original não deve ser alterado.
