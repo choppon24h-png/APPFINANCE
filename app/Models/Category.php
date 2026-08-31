@@ -76,7 +76,7 @@ class Category extends Model
             ['Comissões', 'income', 'percent', '#10b981'], ['Rendimentos', 'income', 'trending-up', '#0ea5e9'],
             ['Reembolso', 'income', 'rotate-ccw', '#6366f1'], ['Outros', 'income', 'tag', '#64748b'],
         ];
-        $check = $this->pdo->prepare('SELECT COUNT(*) FROM categories WHERE user_id = :user_id');
+        $check = $this->pdo->prepare('SELECT COUNT(*) FROM categories WHERE user_id IS NULL OR user_id = :user_id');
         $check->execute(['user_id' => $userId]);
         if ((int) $check->fetchColumn() > 0) return;
         $stmt = $this->pdo->prepare(
