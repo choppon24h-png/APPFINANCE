@@ -19,11 +19,11 @@ Ao final, `public_html` deve conter diretamente `app/`, `public/`, `routes/`,
 ## 2. Crie o banco de dados
 
 1. cPanel > **Bancos de Dados MySQL**.
-2. Crie um banco (ex: `seuusuario_baseapp`) e um usuário com senha forte.
+2. Crie um banco (ex: `seuusuario_appfinance`) e um usuário com senha forte.
 3. Adicione o usuário ao banco com **todos os privilégios**.
 
 Anote banco, usuário e senha — no HostGator eles vêm sempre prefixados com o
-seu usuário cPanel (ex: `chguser_baseapp`).
+seu usuário cPanel (ex: `chguser_appfinance`).
 
 ## 3. Configure o `.env`
 
@@ -38,7 +38,7 @@ APP_SECRET=gere_uma_string_aleatoria_de_32_caracteres
 
 DB_HOST=localhost
 DB_PORT=3306
-DB_DATABASE=seuusuario_baseapp
+DB_DATABASE=seuusuario_appfinance
 DB_USERNAME=seuusuario_dbuser
 DB_PASSWORD=sua_senha_forte
 ```
@@ -54,15 +54,14 @@ Você tem duas opções — escolha uma:
 **Opção A — pelo navegador (recomendado, não precisa de phpMyAdmin):**
 
 Acesse `https://seu-dominio.com.br/_instalar.php?key=SEU_APP_SECRET`
-(o mesmo valor que você colocou em `APP_SECRET` no `.env`). A página roda a
-migration e o seed automaticamente e mostra o resultado. **Apague o arquivo
-`public/_instalar.php` do servidor depois.**
+(o mesmo valor que você colocou em `APP_SECRET` no `.env`). A página executa, em ordem alfabética, todas as migrations e seeds encontrados em `database/migrations/` e `database/seeds/`, incluindo as tabelas financeiras. **Apague o arquivo `public/_instalar.php` do servidor depois.**
 
 **Opção B — via phpMyAdmin:**
 
 1. cPanel > **phpMyAdmin**, selecione o banco criado.
 2. Aba **Importar** > selecione `database/migrations/0001_core_schema.sql` > Executar.
-3. Repita para `database/seeds/0001_admin_seed.sql`.
+    3. Importe `database/migrations/0002_cnpj_lookup.sql` e `database/migrations/0003_finance_schema.sql`, nessa ordem.
+    4. Importe `database/seeds/0001_admin_seed.sql` e `database/seeds/0002_finance_seed.sql`.
 
 ## 5. Permissões de pastas
 
