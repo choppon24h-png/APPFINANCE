@@ -1,39 +1,61 @@
 <?php
 use App\Core\Auth;
 $usuarioLogado = Auth::user();
-$uriAtual      = strtok($_SERVER['REQUEST_URI'], '?');
+$uriAtual = strtok($_SERVER['REQUEST_URI'], '?');
+$flash = $_SESSION['flash'] ?? null;
+unset($_SESSION['flash']);
+$menu = [
+    ['/dashboard', 'Visão geral', 'home'],
+    ['/lancamentos/novo', 'Novo lançamento', 'plus'],
+    ['/lancamentos', 'Lançamentos', 'list'],
+    ['/contas', 'Contas', 'wallet'],
+    ['/investimentos', 'Investimentos', 'chart'],
+    ['/categorias', 'Categorias', 'tag'],
+    ['/centros-custo', 'Centros de custo', 'layers'],
+];
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= htmlspecialchars($title ?? ($_ENV['APP_NAME'] ?? 'Base App')) ?></title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#0f4c81">
+    <meta name="description" content="APPFINANCE: sua visão simples e segura das finanças.">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="icon" href="/assets/icons/icon.svg" type="image/svg+xml">
+    <title><?= htmlspecialchars($title ?? ($_ENV['APP_NAME'] ?? 'APPFINANCE')) ?> · <?= htmlspecialchars($_ENV['APP_NAME'] ?? 'APPFINANCE') ?></title>
     <link href="/assets/css/app.css" rel="stylesheet">
 </head>
 <body>
-<div class="d-flex">
-    <nav class="sidebar p-3" style="width: 240px;">
-        <a href="/dashboard" class="d-block text-white text-decoration-none fw-bold fs-5 mb-4">
-            <?= htmlspecialchars($_ENV['APP_NAME'] ?? 'Base App') ?>
-        </a>
-        <ul class="nav nav-pills flex-column gap-1">
-            <li class="nav-item">
-                <a class="nav-link <?= $uriAtual === '/dashboard' ? 'active' : '' ?>" href="/dashboard">Dashboard</a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link <?= str_starts_with($uriAtual, '/usuarios') ? 'active' : '' ?>" href="/usuarios">Usuarios</a>
-            </li>
-        </ul>
-    </nav>
+<div class="app-shell">
+    <div class="mobile-backdrop" data-nav-close></div>
+    <aside class="sidebar" id="app-sidebar">
+        <div class="brand-row">
+            <a href="/dashboard" class="brand"><span class="brand-mark">A</span><span><?= htmlspecialchars($_ENV['APP_NAME'] ?? 'APPFINANCE') ?></span></a>
+            <button class="icon-button sidebar-close" type="button" data-nav-close aria-label="Fechar menu">×</button>
+        </div>
+        <p class="sidebar-caption">Controle financeiro simples</p>
+        <nav class="main-nav" aria-label="Navegação principal">
+            <?php foreach ($menu as [$href, $label, $icon]): ?>
+                <a class="nav-item <?= $uriAtual === $href || ($href !== '/dashboard' && str_starts_with($uriAtual, $href)) ? 'active' : '' ?>" href="<?= $href ?>">
+                    <span class="nav-icon" data-icon="<?= $icon ?>" aria-hidden="true"></span><span><?= $label ?></span>
+                </a>
+            <?php endforeach; ?>
+            <?php if (Auth::can('manage_users')): ?>
+                <a class="nav-item <?= str_starts_with($uriAtual, '/usuarios') ? 'active' : '' ?>" href="/usuarios"><span class="nav-icon" data-icon="users" aria-hidden="true"></span><span>Usuários</span></a>
+            <?php endif; ?>
+        </nav>
+        <div class="sidebar-bottom">
+            <div class="user-mini"><span class="avatar"><?= htmlspecialchars(mb_strtoupper(mb_substr($usuarioLogado->name ?? 'U', 0, 1))) ?></span><div><strong><?= htmlspecialchars($usuarioLogado->name ?? '') ?></strong><small><?= htmlspecialchars($usuarioLogado->role_name ?? 'Usuário') ?></small></div></div>
+            <a href="/logout" class="logout-link"><span class="nav-icon" data-icon="logout" aria-hidden="true"></span>Sair</a>
+        </div>
+    </aside>
 
-    <div class="flex-grow-1">
-        <header class="d-flex justify-content-between align-items-center bg-white border-bottom px-4 py-2">
-            <h1 class="h5 mb-0"><?= htmlspecialchars($title ?? '') ?></h1>
-            <div class="d-flex align-items-center gap-3">
-                <span class="text-muted small"><?= htmlspecialchars($usuarioLogado->name ?? '') ?></span>
-                <a href="/logout" class="btn btn-sm btn-outline-secondary">Sair</a>
-            </div>
+    <div class="app-main">
+        <header class="topbar">
+            <button class="icon-button menu-trigger" type="button" data-nav-open aria-label="Abrir menu"><span class="hamburger"></span></button>
+            <div class="topbar-title"><span class="eyebrow">APPFINANCE</span><h1><?= htmlspecialchars($title ?? '') ?></h1></div>
+            <a class="quick-add" href="/lancamentos/novo" aria-label="Novo lançamento"><span>+</span><b>Novo</b></a>
         </header>
-        <main class="p-4">
+        <main class="page-content">
+            <?php if ($flash): ?><div class="flash flash-<?= htmlspecialchars($flash['type']) ?>" role="status"><?= htmlspecialchars($flash['message']) ?><button type="button" class="flash-close" data-dismiss>×</button></div><?php endif; ?>
