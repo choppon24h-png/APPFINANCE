@@ -99,16 +99,20 @@ class Investment extends Model
     {
         $stmt = $this->pdo->prepare(
             "SELECT
-                COALESCE(SUM(i.amount_invested), 0) AS invested,
-                COALESCE(SUM(CASE WHEN r.reference_year = YEAR(CURDATE()) AND r.reference_month = MONTH(CURDATE()) THEN r.return_amount ELSE 0 END), 0) AS monthly_return,
-                COALESCE(SUM(r.return_amount), 0) AS total_return,
-                COALESCE(SUM(i.amount_invested + COALESCE(rtotal.total_return, 0)), 0) AS current_value
-             FROM investments i
-             LEFT JOIN investment_returns r ON r.investment_id = i.id
-             LEFT JOIN (SELECT investment_id, SUM(return_amount) AS total_return FROM investment_returns GROUP BY investment_id) rtotal ON rtotal.investment_id = i.id
-             WHERE i.user_id = :user_id AND i.status <> 'inactive'"
+                COALESCE((SELECT SUM(i.amount_invested) FROM investments i WHERE i.user_id = :user_id_invested AND i.status <> 'inactive'), 0) AS invested,
+                COALESCE((SELECT SUM(r.return_amount) FROM investment_returns r JOIN investments i ON i.id = r.investment_id
+                    WHERE i.user_id = :user_id_month AND i.status <> 'inactive'
+                      AND r.reference_year = YEAR(CURDATE()) AND r.reference_month = MONTH(CURDATE())), 0) AS monthly_return,
+                COALESCE((SELECT SUM(r.return_amount) FROM investment_returns r JOIN investments i ON i.id = r.investment_id
+                    WHERE i.user_id = :user_id_total AND i.status <> 'inactive'), 0) AS total_return,
+                COALESCE((SELECT SUM(i.amount_invested) FROM investments i WHERE i.user_id = :user_id_current AND i.status <> 'inactive'), 0)
+                + COALESCE((SELECT SUM(r.return_amount) FROM investment_returns r JOIN investments i ON i.id = r.investment_id
+                    WHERE i.user_id = :user_id_current_return AND i.status <> 'inactive'), 0) AS current_value"
         );
-        $stmt->execute(['user_id' => $userId]);
+        $stmt->execute([
+            'user_id_invested' => $userId, 'user_id_month' => $userId, 'user_id_total' => $userId,
+            'user_id_current' => $userId, 'user_id_current_return' => $userId,
+        ]);
         return $stmt->fetch();
     }
 
