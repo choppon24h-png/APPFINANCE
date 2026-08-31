@@ -63,6 +63,22 @@ class Transaction extends Model
         return $stmt->fetchAll();
     }
 
+    public function allForUser(int $userId, array $filters): array
+    {
+        [$where, $params] = $this->filters($userId, $filters);
+        $stmt = $this->pdo->prepare(
+            "SELECT t.*, a.name AS account_name, c.name AS category_name, cc.name AS cost_center_name
+             FROM transactions t
+             JOIN accounts a ON a.id = t.account_id AND a.user_id = t.user_id
+             LEFT JOIN categories c ON c.id = t.category_id
+             LEFT JOIN cost_centers cc ON cc.id = t.cost_center_id
+             WHERE {$where}
+             ORDER BY t.transaction_date DESC, t.id DESC"
+        );
+        $stmt->execute($params);
+        return $stmt->fetchAll();
+    }
+
     public function countForUser(int $userId, array $filters): int
     {
         [$where, $params] = $this->filters($userId, $filters);
