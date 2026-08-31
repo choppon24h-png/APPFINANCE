@@ -3,9 +3,9 @@
  * BASEAPP — Instalador via navegador (para hospedagem compartilhada,
  * quando nao ha acesso facil ao phpMyAdmin ou terminal).
  *
- * Executa database/migrations/0001_core_schema.sql e
- * database/seeds/0001_admin_seed.sql direto no banco configurado no .env.
- * E seguro rodar mais de uma vez (usa CREATE TABLE IF NOT EXISTS / INSERT IGNORE).
+ * Executa todas as migrations e seeds SQL versionados direto no banco
+ * configurado no .env. Os arquivos são processados em ordem alfabética.
+ * As migrations do projeto são idempotentes e podem ser reaplicadas com segurança.
  *
  * Acesso: https://seu-dominio.com/_instalar.php?key=SEU_APP_SECRET
  * (a chave e o valor de APP_SECRET no seu .env — assim ninguem mais
@@ -78,10 +78,11 @@ function executarArquivoSql(PDO $pdo, string $path): array {
     return $resultados;
 }
 
-$resultados = array_merge(
-    executarArquivoSql($pdo, BASE_PATH . '/database/migrations/0001_core_schema.sql'),
-    executarArquivoSql($pdo, BASE_PATH . '/database/seeds/0001_admin_seed.sql')
-);
+$resultados = [];
+$migrations = glob(BASE_PATH . '/database/migrations/*.sql') ?: [];
+$seeds = glob(BASE_PATH . '/database/seeds/*.sql') ?: [];
+foreach ($migrations as $migration) $resultados = array_merge($resultados, executarArquivoSql($pdo, $migration));
+foreach ($seeds as $seed) $resultados = array_merge($resultados, executarArquivoSql($pdo, $seed));
 
 $ok    = count(array_filter($resultados, fn($r) => $r['status'] === 'ok'));
 $erros = count(array_filter($resultados, fn($r) => $r['status'] === 'error'));
@@ -90,14 +91,16 @@ $erros = count(array_filter($resultados, fn($r) => $r['status'] === 'error'));
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <title>BASEAPP — Instalador</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>APPFINANCE — Instalador</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body class="bg-light">
 <div class="container py-5" style="max-width:800px">
     <div class="card shadow-sm">
-        <div class="card-header bg-primary text-white">
-            <h4 class="mb-0">BASEAPP — Instalador de Banco de Dados</h4>
+                    <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">APPFINANCE — Instalador de Banco de Dados</h4>
+
         </div>
         <div class="card-body">
             <div class="alert <?= $erros > 0 ? 'alert-warning' : 'alert-success' ?>">
