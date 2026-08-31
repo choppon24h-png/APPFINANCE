@@ -40,6 +40,8 @@ Router::group(['middleware' => [AuthMiddleware::class, SessionTimeoutMiddleware:
     Router::get('/investimentos', 'InvestmentController@index');
     Router::get('/investimentos/novo', 'InvestmentController@create');
     Router::post('/investimentos', 'InvestmentController@store');
+    Router::get('/investimentos/{id}/resgatar', 'InvestmentController@redeemForm');
+    Router::post('/investimentos/{id}/resgatar', 'InvestmentController@redeem');
     Router::get('/investimentos/{id}/rendimento', 'InvestmentController@returnForm');
     Router::post('/investimentos/{id}/rendimento', 'InvestmentController@addReturn');
     Router::get('/investimentos/{id}/historico', 'InvestmentController@history');
