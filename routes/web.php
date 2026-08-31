@@ -56,6 +56,9 @@ Router::group(['middleware' => [AuthMiddleware::class, SessionTimeoutMiddleware:
     Router::post('/centros-custo/{id}/toggle', 'CatalogController@costCenterToggle');
     Router::post('/centros-custo/{id}/excluir', 'CatalogController@costCenterDelete');
 
+    Router::get('/relatorios', 'ReportController@index');
+    Router::get('/relatorios/csv', 'ReportController@csv');
+
     Router::group(['prefix' => '/api'], function () {
         Router::get('/cnpj/{cnpj}', 'CnpjController@consultar');
     });
