@@ -15,7 +15,9 @@ class CatalogController extends Controller
 
     public function categories(): void
     {
-        $this->view('catalog/categories', ['title' => 'Categorias', 'categories' => (new Category())->forUser($this->userId())]);
+        $model = new Category();
+        $edit = !empty($_GET['edit']) && ctype_digit((string) $_GET['edit']) ? $model->findForUser((int) $_GET['edit'], $this->userId()) : null;
+        $this->view('catalog/categories', ['title' => 'Categorias', 'categories' => $model->forUser($this->userId()), 'editCategory' => $edit]);
     }
 
     public function categoryStore(): void
@@ -65,7 +67,9 @@ class CatalogController extends Controller
 
     public function costCenters(): void
     {
-        $this->view('catalog/cost_centers', ['title' => 'Centros de custo', 'costCenters' => (new CostCenter())->forUser($this->userId())]);
+        $model = new CostCenter();
+        $edit = !empty($_GET['edit']) && ctype_digit((string) $_GET['edit']) ? $model->findForUser((int) $_GET['edit'], $this->userId()) : null;
+        $this->view('catalog/cost_centers', ['title' => 'Centros de custo', 'costCenters' => $model->forUser($this->userId()), 'editCenter' => $edit]);
     }
 
     public function costCenterStore(): void
