@@ -56,6 +56,27 @@ class InvestmentService
         }
     }
 
+    public function redeem(int $userId, int $investmentId, array $input): void
+    {
+        $investment = $this->investments->findForUser($investmentId, $userId);
+        if (!$investment) throw new InvalidArgumentException('Investimento não encontrado.');
+        $amount = FinanceInput::amount($input['amount'] ?? null, 'Valor do resgate');
+        $date = FinanceInput::date($input['movement_date'] ?? date('Y-m-d'), 'Data do resgate', true);
+        $stmt = $this->pdo->prepare("SELECT i.amount_invested + COALESCE((SELECT SUM(CASE WHEN type = 'income' OR type = 'adjustment' THEN amount WHEN type = 'redemption' THEN -amount ELSE 0 END) FROM investment_movements WHERE investment_id = i.id), 0) + COALESCE((SELECT SUM(return_amount) FROM investment_returns WHERE investment_id = i.id), 0) FROM investments i WHERE i.id = :id AND i.user_id = :user_id");
+        $stmt->execute(['id' => $investmentId, 'user_id' => $userId]);
+        $currentValue = (float) $stmt->fetchColumn();
+        if ($amount > $currentValue + 0.009) throw new InvalidArgumentException('O resgate não pode ser maior que o patrimônio atual.');
+        $this->pdo->beginTransaction();
+        try {
+            $this->investments->addMovement(['investment_id' => $investmentId, 'type' => 'redemption', 'amount' => $amount, 'movement_date' => $date, 'rate' => null, 'notes' => FinanceInput::text($input['notes'] ?? null, 'Observações', 255, false)]);
+            $this->movements->record((int) $investment->account_id, null, null, 'investment', $amount, $date);
+            $this->pdo->commit();
+        } catch (\Throwable $e) {
+            if ($this->pdo->inTransaction()) $this->pdo->rollBack();
+            throw $e;
+        }
+    }
+
     public function addReturn(int $userId, int $investmentId, array $input): void
     {
         $investment = $this->investments->findForUser($investmentId, $userId);
