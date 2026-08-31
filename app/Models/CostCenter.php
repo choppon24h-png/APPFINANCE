@@ -62,7 +62,7 @@ class CostCenter extends Model
             ['Pessoal', 'PES'], ['Casa', 'CAS'], ['Empresa', 'EMP'],
             ['Carro', 'CAR'], ['Operacional', 'OPE'],
         ];
-        $check = $this->pdo->prepare('SELECT COUNT(*) FROM cost_centers WHERE user_id = :user_id');
+        $check = $this->pdo->prepare('SELECT COUNT(*) FROM cost_centers WHERE user_id IS NULL OR user_id = :user_id');
         $check->execute(['user_id' => $userId]);
         if ((int) $check->fetchColumn() > 0) return;
         $stmt = $this->pdo->prepare(
