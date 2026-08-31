@@ -40,6 +40,23 @@ final class FinanceInput
         return $amount;
     }
 
+    public static function nonNegativeAmount(mixed $value, string $field = 'Valor'): float
+    {
+        $raw = trim((string) ($value ?? ''));
+        if ($raw === '') return 0.0;
+        $raw = str_replace(['R$', ' '], '', $raw);
+        if (str_contains($raw, ',') && str_contains($raw, '.')) {
+            $raw = str_replace('.', '', $raw);
+            $raw = str_replace(',', '.', $raw);
+        } else {
+            $raw = str_replace(',', '.', $raw);
+        }
+        if (!is_numeric($raw) || (float) $raw < 0 || (float) $raw > 999999999999.99) {
+            throw new InvalidArgumentException("{$field} deve ser zero ou maior.");
+        }
+        return round((float) $raw, 2);
+    }
+
     public static function date(mixed $value, string $field, bool $required = true): ?string
     {
         $raw = trim((string) ($value ?? ''));

@@ -91,7 +91,7 @@ class AccountController extends Controller
             'notes' => FinanceInput::text($input['notes'] ?? null, 'Observações', 2000, false),
         ];
         if ($withInitial) {
-            $data['initial_balance'] = (float) FinanceInput::amount($input['initial_balance'] ?? 0, 'Saldo inicial');
+            $data['initial_balance'] = FinanceInput::nonNegativeAmount($input['initial_balance'] ?? 0, 'Saldo inicial');
             $data['initial_date'] = FinanceInput::date($input['initial_date'] ?? date('Y-m-d'), 'Data do saldo inicial', true);
         }
         return $data;
