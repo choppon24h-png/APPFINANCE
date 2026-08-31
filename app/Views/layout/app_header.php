@@ -12,6 +12,7 @@ $menu = [
     ['/investimentos', 'Investimentos', 'chart'],
     ['/categorias', 'Categorias', 'tag'],
     ['/centros-custo', 'Centros de custo', 'layers'],
+    ['/relatorios', 'Relatórios', 'chart'],
 ];
 ?>
 <!DOCTYPE html>
