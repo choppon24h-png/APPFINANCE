@@ -253,7 +253,7 @@ class FinanceService
             ];
             $insert->execute($params);
             if ($insert->rowCount() > 0) $created++;
-            $date = $this->nextDate($date->format('Y-m-d'), $recurrence->frequency);
+            $date = new DateTimeImmutable($this->nextDate($date->format('Y-m-d'), $recurrence->frequency));
         }
         $next = $date->format('Y-m-d');
         $nextStmt = $this->pdo->prepare('UPDATE recurring_transactions SET next_date = :next_date WHERE id = :id AND user_id = :user_id');
@@ -263,10 +263,14 @@ class FinanceService
 
     private function nextDate(string $date, string $frequency): string
     {
-        $modifiers = [
-            'daily' => '+1 day', 'weekly' => '+1 week', 'biweekly' => '+2 weeks', 'monthly' => '+1 month',
-            'bimonthly' => '+2 months', 'quarterly' => '+3 months', 'semiannual' => '+6 months', 'annual' => '+1 year',
-        ];
-        return (new DateTimeImmutable($date))->modify($modifiers[$frequency] ?? '+1 day')->format('Y-m-d');
+        $base = new DateTimeImmutable($date);
+        if (in_array($frequency, ['monthly', 'bimonthly', 'quarterly', 'semiannual', 'annual'], true)) {
+            $months = ['monthly' => 1, 'bimonthly' => 2, 'quarterly' => 3, 'semiannual' => 6, 'annual' => 12][$frequency];
+            $target = $base->modify('first day of this month')->modify('+' . $months . ' months');
+            $day = min((int) $base->format('d'), (int) $target->format('t'));
+            return $target->setDate((int) $target->format('Y'), (int) $target->format('m'), $day)->format('Y-m-d');
+        }
+        $modifiers = ['daily' => '+1 day', 'weekly' => '+1 week', 'biweekly' => '+2 weeks'];
+        return $base->modify($modifiers[$frequency] ?? '+1 day')->format('Y-m-d');
     }
 }

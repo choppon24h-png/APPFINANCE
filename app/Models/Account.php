@@ -33,7 +33,7 @@ class Account extends Model
                 (user_id, name, bank_name, account_type, agency, account_number,
                  initial_balance, current_balance, initial_date, status, notes)
              VALUES (:user_id, :name, :bank_name, :account_type, :agency, :account_number,
-                     :initial_balance, :initial_balance, :initial_date, :status, :notes)'
+                     :initial_balance, :current_balance, :initial_date, :status, :notes)'
         );
         $stmt->execute([
             'user_id' => $userId,
@@ -43,6 +43,7 @@ class Account extends Model
             'agency' => $data['agency'],
             'account_number' => $data['account_number'],
             'initial_balance' => $data['initial_balance'],
+            'current_balance' => $data['initial_balance'],
             'initial_date' => $data['initial_date'],
             'status' => $data['status'],
             'notes' => $data['notes'],
