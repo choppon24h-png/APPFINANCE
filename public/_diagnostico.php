@@ -30,7 +30,7 @@ require_once $base . '/app/autoload.php';
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
-echo "<h1>Diagnostico BASEAPP</h1>";
+echo "<h1>Diagnóstico APPFINANCE</h1>";
 
 echo "<h2>1. Ambiente PHP</h2>";
 echo "Versao do PHP: " . phpversion() . "<br>";
@@ -59,7 +59,11 @@ echo "<h2>4. Conexao com o banco de dados</h2>";
 try {
     $pdo = \App\Core\Database::getInstance();
     echo "<span style='color:green'>Conexao OK.</span><br>";
-    $tabelasEsperadas = ['roles', 'permissions', 'role_permissions', 'users', 'tenants', 'user_tenants', 'audit_logs'];
+    $tabelasEsperadas = [
+        'roles', 'permissions', 'role_permissions', 'users', 'tenants', 'user_tenants', 'audit_logs',
+        'accounts', 'categories', 'cost_centers', 'transactions', 'recurring_transactions',
+        'investments', 'investment_movements', 'investment_returns', 'account_movements',
+    ];
     foreach ($tabelasEsperadas as $t) {
         $existe = $pdo->query("SHOW TABLES LIKE '{$t}'")->fetchColumn();
         echo "Tabela <b>{$t}</b>: " . ($existe ? "<span style='color:green'>OK</span>" : "<span style='color:red'>NAO ENCONTRADA (rode o instalador ou importe a migration)</span>") . "<br>";
