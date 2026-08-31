@@ -32,9 +32,9 @@ O projeto inicial não possuía domínio financeiro implementado: não havia con
 
 Também foi identificado que o instalador não executava automaticamente a migration de CNPJ, que não existia uma camada de serviço financeiro, que não havia paginação ou consultas agregadas do domínio, e que o isolamento de dados financeiros por usuário ainda precisava ser aplicado em todas as queries novas. A conexão com produção permanece intencionalmente pendente.
 
-## Arquitetura proposta
+## Arquitetura implementada
 
-A arquitetura evoluída mantém o MVC simples e acrescenta uma camada de domínio compatível com hospedagem compartilhada:
+A arquitetura evoluída mantém o MVC simples e acrescenta uma camada de domínio compatível com hospedagem compartilhada. A implementação atual inclui:
 
 ```text
 public/
@@ -58,17 +58,17 @@ routes/                     Rotas HTML e API
 storage/                    Logs, sessões e uploads fora do público
 ```
 
-As novas entidades financeiras devem sempre conter `user_id`, utilizar prepared statements, validar todos os identificadores recebidos, limitar resultados e aplicar o escopo do usuário na consulta. O saldo disponível será calculado com base em saldo inicial e movimentações efetivadas: despesas pendentes não reduzem o saldo, receitas previstas não aumentam o saldo e transferências entre contas não entram como receita ou despesa.
+As entidades financeiras implementadas contêm `user_id`, utilizam prepared statements, validam identificadores recebidos e aplicam o escopo do usuário nas consultas. O saldo disponível é calculado com base em saldo inicial e movimentações efetivadas: despesas pendentes não reduzem o saldo, receitas previstas não aumentam o saldo e transferências entre contas não entram como receita ou despesa.
 
 ## Escopo funcional da evolução
 
-A aplicação terá uma tela única de **Novo Lançamento** para receitas e despesas, com recorrência opcional e campos avançados recolhíveis. Também contará com contas financeiras, categorias, centros de custo, lançamentos com status e filtros, recorrências sem duplicidade, investimentos, aplicações, resgates, rendimentos manuais, rankings baseados exclusivamente nos dados cadastrados pelo usuário, fluxo de caixa, relatórios e exportação CSV/PDF quando compatível com a hospedagem.
+A aplicação tem uma tela única de **Novo Lançamento** para receitas e despesas, com recorrência opcional e campos avançados recolhíveis. Também conta com contas financeiras, categorias, centros de custo, lançamentos com status e filtros, recorrências sem duplicidade, investimentos, aplicações, resgates, rendimentos manuais, rankings baseados exclusivamente nos dados cadastrados pelo usuário, fluxo de caixa, relatórios e exportação CSV. A ação **Imprimir / PDF** usa o diálogo de impressão do navegador, compatível com hospedagem compartilhada e sem biblioteca externa obrigatória.
 
-O dashboard apresentará saldo total, receitas, despesas, resultado do mês, total investido, rendimentos, evolução mensal, composição de despesas, maiores receitas, próximos vencimentos, alertas calculados e comparação de rentabilidade absoluta e percentual. Nenhuma afirmação sobre bancos externos será feita sem fonte ou integração externa autorizada.
+O dashboard apresenta saldo total, receitas, despesas, resultado do mês, total investido, rendimentos, evolução mensal em canvas, composição de despesas, maiores receitas, próximos vencimentos, alerta de pendências e comparação de rentabilidade absoluta e percentual. Nenhuma afirmação sobre bancos externos será feita sem fonte ou integração externa autorizada.
 
 ## Banco de dados e migrations
 
-A migration base existente continua sendo a origem das tabelas de autenticação, RBAC, multi-tenant e auditoria. As migrations financeiras serão adicionadas em arquivos SQL sequenciais e idempotentes, com chaves estrangeiras e índices para `user_id`, `account_id`, `category_id`, `cost_center_id`, `transaction_date`, `due_date` e `status`.
+A migration base existente continua sendo a origem das tabelas de autenticação, RBAC, multi-tenant e auditoria. As migrations financeiras estão em `0003_finance_schema.sql`, com chaves estrangeiras e índices para `user_id`, `account_id`, `category_id`, `cost_center_id`, `transaction_date`, `due_date` e `status`. O seed financeiro `0002_finance_seed.sql` é idempotente e contém somente categorias e centros de custo demonstrativos.
 
 As credenciais da produção não são armazenadas no GitHub. Para instalação, copie `.env.example` para `.env`, preencha apenas o ambiente escolhido e execute o instalador protegido ou os arquivos SQL pelo phpMyAdmin. O arquivo `.env` está ignorado pelo Git.
 
@@ -79,10 +79,11 @@ O sistema utiliza `password_hash`, `password_verify`, prepared statements com em
 ## Desenvolvimento local
 
 1. Copie `.env.example` para `.env` e configure um banco MySQL/MariaDB local.
-2. Execute `database/migrations/0001_core_schema.sql`, as migrations financeiras em ordem e os seeds.
+2. Execute `database/migrations/*.sql` e `database/seeds/*.sql` em ordem, ou use `public/_instalar.php` protegido.
 3. Aponte o document root do Apache para `public/` ou utilize o `.htaccess` da raiz em um ambiente compatível.
-4. Para PHP embutido em desenvolvimento, execute `php -S localhost:8000 -t public public/index.php`.
-5. Acesse `/login` e altere imediatamente a senha do usuário administrativo inicial quando o seed for utilizado.
+4. Para PHP embutido em desenvolvimento, execute `php -S 127.0.0.1:8000 -t public tools/router.php`.
+5. Execute `php tests/SmokeTest.php` com o banco local preparado.
+6. Acesse `/login` e altere imediatamente a senha do usuário administrativo inicial quando o seed for utilizado.
 
 ## HostGator/cPanel
 
@@ -94,7 +95,7 @@ A configuração real do banco da HostGator ainda não foi conectada. Quando as 
 
 ## Qualidade e testes
 
-Os testes devem cobrir autenticação, isolamento por usuário, criação e edição de contas, receitas, despesas, recorrências, pagamentos, investimentos, rendimentos, transferências, cálculos do dashboard, filtros, exportação e visualização em desktop, tablet e celular. Também devem verificar que uma transferência entre contas não é contabilizada como receita ou despesa.
+A validação executada inclui lint de todos os PHP, checagem de sintaxe JavaScript e JSON, reinstalação do banco local do zero e repetida, smoke test de saldo, receita, despesa pendente, transferência, recorrência, aplicação, rendimento, resgate e agregações do dashboard, teste HTTP das rotas autenticadas, exportação CSV, assets PWA, inspeção visual do login/dashboard/lançamento e rejeição de POST sem CSRF. Também foi verificado que uma transferência entre contas não é contabilizada como receita ou despesa.
 
 ## Repositório original
 
