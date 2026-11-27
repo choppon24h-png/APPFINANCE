@@ -13,6 +13,8 @@ use PDO;
 class Schema
 {
     private static ?array $cache = null;
+    /** Motivo da ultima falha ao consultar o schema (para diagnostico). */
+    private static ?string $ultimoErro = null;
 
     /** Colunas que a 0004 adiciona em users. */
     private const USER_COLUMNS = [
@@ -83,7 +85,13 @@ class Schema
                 }
             }
         } catch (\Throwable $e) {
-            Logger::warning('Nao foi possivel verificar o schema', ['erro' => $e->getMessage()]);
+            self::$ultimoErro = get_class($e) . ': ' . $e->getMessage();
+            Logger::warning('Nao foi possivel verificar o schema', [
+                'excecao' => get_class($e),
+                'codigo'  => (string) $e->getCode(),
+                'erro'    => $e->getMessage(),
+                'arquivo' => $e->getFile() . ':' . $e->getLine(),
+            ]);
             // Sem informacao confiavel: nao bloqueia o acesso
             self::$cache = [];
             return self::$cache;
@@ -96,6 +104,14 @@ class Schema
         }
 
         return self::$cache;
+    }
+
+    /** Motivo (classe + mensagem) da falha ao consultar o schema, se houve. */
+    public static function lastError(): string
+    {
+        self::missingAccess();
+
+        return (string) (self::$ultimoErro ?? '');
     }
 
     public static function accessReady(): bool

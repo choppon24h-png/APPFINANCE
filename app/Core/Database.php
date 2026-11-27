@@ -22,11 +22,18 @@ class Database {
                     PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
                     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_OBJ,
                     PDO::ATTR_EMULATE_PREPARES   => false,
+                    // evita POST travado por minutos quando o banco nao responde
+                    PDO::ATTR_TIMEOUT            => 5,
                 ];
 
                 self::$instance = new PDO($dsn, $user, $pass, $options);
             } catch (PDOException $e) {
-                Logger::error('Falha na conexao com o banco de dados', ['message' => $e->getMessage()]);
+                Logger::error('Falha na conexao com o banco de dados', [
+                    'message' => $e->getMessage(),
+                    'host'    => $host ?? '',
+                    'banco'   => $db ?? '',
+                    'dsn'     => 'mysql:host=***;port=' . ($port ?? '') . ';dbname=' . ($db ?? ''),
+                ]);
                 throw new DatabaseException('Erro de conexao com o banco de dados.', 503, $e);
             }
         }

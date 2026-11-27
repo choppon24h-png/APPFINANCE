@@ -13,6 +13,14 @@ $userId = 1;
 $accountIds = [];
 $investmentIds = [];
 $label = 'Smoke ' . date('YmdHis');
+// base do mes antes do teste: o banco local pode ter lancamentos de execucoes
+// anteriores, entao comparamos a diferenca e nao o total absoluto.
+$baseMes = $pdo->prepare("SELECT
+        COALESCE(SUM(CASE WHEN type = 'income'  AND status = 'received' THEN amount END), 0) AS receitas,
+        COALESCE(SUM(CASE WHEN type = 'expense' AND status = 'paid'     THEN amount END), 0) AS despesas
+    FROM transactions WHERE user_id = :u AND transaction_date BETWEEN :i AND :f");
+$baseMes->execute(['u' => $userId, 'i' => date('Y-m-01'), 'f' => date('Y-m-t')]);
+$base = $baseMes->fetch(PDO::FETCH_OBJ);
 
 function check(bool $condition, string $message): void
 {
@@ -72,8 +80,8 @@ try {
     check(abs((float) $account->findForUser($accountIds[0], $userId)->current_balance - 2400.00) < 0.01, 'resgate devolve valor à conta de origem');
 
     $summary = (new Transaction())->summary($userId, date('Y-m-01'), date('Y-m-t'));
-    check(abs((float) $summary->income - 2500.00) < 0.01, 'dashboard soma receitas recebidas');
-    check(abs((float) $summary->expense - 400.00) < 0.01, 'dashboard soma apenas despesas pagas');
+    check(abs(((float) $summary->income - (float) $base->receitas) - 2500.00) < 0.01, 'dashboard soma receitas recebidas');
+    check(abs(((float) $summary->expense - (float) $base->despesas) - 400.00) < 0.01, 'dashboard soma apenas despesas pagas');
     check((int) $pdo->query("SELECT COUNT(*) FROM transactions WHERE user_id = {$userId} AND type = 'transfer' AND description LIKE " . $pdo->quote($label . '%'))->fetchColumn() === 2, 'transferência cria dois lançamentos internos');
     echo "SMOKE TEST PASSOU\n";
 } finally {

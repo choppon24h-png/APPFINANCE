@@ -13,7 +13,7 @@ class ErrorPage
     /**
      * Renderiza a pagina e encerra a requisicao.
      */
-    public static function render(int $status, string $title, string $message, string $hint = '', array $debug = [], array $actions = [], string $ref = ''): void
+    public static function render(int $status, string $title, string $message, string $hint = '', array $debug = [], array $actions = [], string $ref = '', string $detalhe = ''): void
     {
         if (!headers_sent()) {
             http_response_code($status);
@@ -37,6 +37,12 @@ class ErrorPage
             $classe = $actionsHtml === '' ? 'button' : 'button ghost';
             $actionsHtml .= '<a class="' . $classe . '" href="' . htmlspecialchars($url, ENT_QUOTES, 'UTF-8') . '">'
                 . htmlspecialchars($rotulo, ENT_QUOTES, 'UTF-8') . '</a>';
+        }
+
+        $detalheHtml = '';
+        if ($detalhe !== '') {
+            $detalheHtml = '<details class="err-detail" open><summary>Detalhes técnicos</summary><pre>'
+                . htmlspecialchars($detalhe, ENT_QUOTES, 'UTF-8') . '</pre></details>';
         }
 
         $refHtml = '';
@@ -83,6 +89,9 @@ class ErrorPage
         background: #1f6fe0; color: #fff; box-shadow: 0 12px 26px rgba(31,111,224,.35);
     }
     a.ghost { background: transparent; color: #cfe0ff; border: 1px solid #2b4a7d; box-shadow: none; }
+    .err-detail { margin-top: 16px; border: 1px solid #2b4a7d; border-radius: 12px; background: #050b16; }
+    .err-detail summary { cursor: pointer; padding: 10px 14px; font-size: 12px; font-weight: 700; color: #8fb6ff; }
+    .err-detail pre { margin: 0; padding: 0 14px 14px; color: #9fb4d3; font-size: 11.5px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
     p.ref { margin-top: 14px; font-size: 12px; color: #8ea3c4; }
     p.ref code { background: rgba(59,139,255,.14); padding: 1px 5px; border-radius: 5px; color: #cfe0ff; }
     .err-debug { margin-top: 18px; padding: 14px; border-radius: 12px; background: #050b16; border: 1px solid #1f3560; color: #8ea3c4; font-size: 11px; overflow: auto; }
@@ -97,6 +106,7 @@ class ErrorPage
         <p>{$message}</p>
         {$hint}
         {$refHtml}
+        {$detalheHtml}
         {$debugHtml}
         <div class="actions">
             {$actionsHtml}
@@ -152,7 +162,7 @@ HTML;
         );
     }
 
-    public static function serverError(\Throwable $e, string $ref = ''): void
+    public static function serverError(\Throwable $e, string $ref = '', string $detalhe = ''): void
     {
         self::render(
             500,
@@ -161,7 +171,8 @@ HTML;
             'Se precisar de ajuda, informe o código abaixo: ele identifica exatamente esta falha no log.',
             ['exception' => $e->getMessage(), 'file' => $e->getFile() . ':' . $e->getLine()],
             [],
-            $ref
+            $ref,
+            $detalhe
         );
     }
 
@@ -174,12 +185,30 @@ HTML;
         self::render(
             503,
             'Banco de dados inconsistente',
-            'A consulta falhou porque o banco não tem a estrutura esperada por esta versão do sistema.'
-                . ($detalhe !== '' ? ' Detalhe técnico: ' . $detalhe : ''),
+            'A consulta falhou porque o banco não tem a estrutura esperada por esta versão do sistema.',
             'Abra /_atualizar.php para conferir o schema e aplicar as atualizações pendentes. Se o problema continuar, verifique /_logs.php.',
             [],
             ['Abrir atualizador' => '/_atualizar.php', 'Ver logs' => '/_logs.php', 'Ir para o login' => '/login'],
-            $ref
+            $ref,
+            $detalhe
+        );
+    }
+
+    /**
+     * 503 para falha de consulta/conexao no banco, ja com o motivo tecnico
+     * resumido (sem usuario, senha ou host).
+     */
+    public static function databaseFailure(string $detalhe = '', string $ref = ''): void
+    {
+        self::render(
+            503,
+            'Não foi possível consultar o banco',
+            'A aplicação não conseguiu concluir a operação no banco de dados.',
+            'Confira em /_atualizar.php se as credenciais do .env estão corretas e se o banco está no ar. O motivo exato aparece abaixo.',
+            [],
+            ['Abrir diagnóstico' => '/_atualizar.php', 'Ver logs' => '/_logs.php', 'Ir para o login' => '/login'],
+            $ref,
+            $detalhe
         );
     }
 }

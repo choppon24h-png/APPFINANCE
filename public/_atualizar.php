@@ -269,6 +269,50 @@ foreach ($arquivosLog as $logPath) {
         <div class="msg ok"><?= htmlspecialchars($m) ?></div>
     <?php endforeach; ?>
 
+    <?php
+    // Status público e sanitizado da conexão: permite diagnosticar o 500
+    // sem precisar da chave do .env.
+    $statusBanco = 'ok';
+    if ($dbErro !== '') {
+        $statusBanco = (string) preg_replace("/'[^']*'@'[^']*'/", "'***'@'***'", $dbErro);
+        $statusBanco = (string) preg_replace('/\b\d{1,3}(?:\.\d{1,3}){3}\b/', '***', $statusBanco);
+        $statusBanco = mb_substr($statusBanco, 0, 240);
+    }
+    ?>
+    <?php
+    // Teste real de leitura na tabela users: é o que falha no 500 do login.
+    $testeUsers = 'não executado';
+    $testeUsersOk = null;
+    if ($pdo) {
+        try {
+            $pdo->query('SELECT COUNT(*) FROM users')->fetchColumn();
+            $testeUsers = 'ok';
+            $testeUsersOk = true;
+        } catch (Throwable $e) {
+            $testeUsers = (string) preg_replace("/'[^']*'@'[^']*'/", "'***'@'***'", $e->getMessage());
+            $testeUsers = mb_substr($testeUsers, 0, 240);
+            $testeUsersOk = false;
+        }
+    }
+    ?>
+    <div class="card" style="border-color:<?= $dbErro === '' ? '#1f7a4d' : '#8a2b2b' ?>">
+        <p style="margin:0;font-size:13px">
+            <strong>Conexão com o banco:</strong>
+            <span class="<?= $dbErro === '' ? 'ok' : 'bad' ?>">
+                <?= $dbErro === '' ? 'ok' : htmlspecialchars($statusBanco) ?>
+            </span>
+        </p>
+        <p class="foot" style="margin:6px 0 0">
+            PHP <?= PHP_VERSION ?> · driver pdo_mysql: <?= extension_loaded('pdo_mysql') ? 'ok' : 'AUSENTE' ?>
+            · .env: <?= is_file($envFile) ? 'ok' : 'AUSENTE' ?>
+            · banco configurado: <?= htmlspecialchars((string) ($env['DB_DATABASE'] ?? '(vazio)')) ?>
+        </p>
+        <p style="margin:8px 0 0;font-size:13px">
+            <strong>Leitura da tabela users:</strong>
+            <span class="<?= $testeUsersOk === false ? 'bad' : 'ok' ?>"><?= htmlspecialchars($testeUsers) ?></span>
+        </p>
+    </div>
+
     <?php if (!$autorizado): ?>
         <div class="card">
             <p>Este diagnóstico mostra detalhes técnicos do servidor. Informe a chave <code>APP_SECRET</code> do arquivo <code>.env</code> para continuar.</p>

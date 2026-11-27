@@ -131,8 +131,9 @@ class ErrorHandler
                 'Não foi possível falar com o banco de dados agora. Tente novamente em alguns instantes.',
                 'Se o problema continuar, confira as credenciais do .env em /_atualizar.php ou /_diagnostico.php.',
                 [],
-                ['Abrir diagnóstico' => '/_diagnostico.php', 'Ir para o login' => '/login'],
-                $ref
+                ['Abrir diagnóstico' => '/_diagnostico.php', 'Ver logs' => '/_logs.php', 'Ir para o login' => '/login'],
+                $ref,
+                self::detalheSanitizado($e)
             );
         }
 
@@ -142,11 +143,22 @@ class ErrorHandler
             if ($faltando !== '') {
                 ErrorPage::outdatedSchema($faltando, $ref);
             }
-            ErrorPage::databaseStructure($mensagem, $ref);
+            $detalheSchema = Schema::lastError();
+            ErrorPage::databaseStructure(
+                self::detalheSanitizado($e)
+                    . ($detalheSchema !== '' ? ' | verificação do schema falhou: ' . $detalheSchema : ''),
+                $ref
+            );
         }
 
-        // 3) Qualquer outra coisa => 500 com codigo de referencia
-        ErrorPage::serverError($e, $ref);
+        // 3) Qualquer outra falha vinda do banco (privilegio, timeout, tabela
+        //    corrompida, driver ausente) => 503 com o motivo tecnico resumido
+        if (self::ehErroDeBanco($e)) {
+            ErrorPage::databaseFailure(self::detalheSanitizado($e), $ref);
+        }
+
+        // 4) Qualquer outra coisa => 500 com codigo de referencia
+        ErrorPage::serverError($e, $ref, self::detalheSanitizado($e));
     }
 
     /* ------------------------------------------------------------------
@@ -180,6 +192,66 @@ class ErrorHandler
             '/SQLSTATE\[HY000\] \[(2002|2003|2005|1044|1045|1049)\]|Connection refused|Unknown database|Access denied for user|getaddrinfo|No such host|server has gone away/i',
             $texto
         );
+    }
+
+    /** A falha veio do banco (PDO/DatabaseException/SQLSTATE)? */
+    private static function ehErroDeBanco(\Throwable $e): bool
+    {
+        for ($atual = $e; $atual !== null; $atual = $atual->getPrevious()) {
+            if ($atual instanceof \PDOException || $atual instanceof DatabaseException) {
+                return true;
+            }
+        }
+        return (bool) preg_match('/SQLSTATE\[|SQLSTATE\s*\d|PDOException|mysql|mysqli/i', self::mensagemTecnica($e));
+    }
+
+    /**
+     * Detalhe tecnico curto e sem dados sensiveis, para aparecer na tela.
+     * Remove usuario/senha/host de mensagens como
+     * "Access denied for user 'chg_user'@'localhost'".
+     */
+    private static function detalheSanitizado(\Throwable $e): string
+    {
+        $partes = [];
+        $sqlstate = '';
+        $driver   = '';
+        for ($atual = $e; $atual !== null; $atual = $atual->getPrevious()) {
+            if ($atual instanceof \PDOException) {
+                // o SQLSTATE costuma vir na mensagem; getCode() pode ser "0"
+                if ($sqlstate === '' && preg_match('/SQLSTATE\[([0-9A-Z]{5})\]/', $atual->getMessage(), $mm)) {
+                    $sqlstate = $mm[1];
+                }
+                $codigo = (string) $atual->getCode();
+                if ($sqlstate === '' && $codigo !== '' && $codigo !== '0') {
+                    $sqlstate = $codigo;
+                }
+                if ($driver === '' && !empty($atual->errorInfo[1])) {
+                    $driver = (string) $atual->errorInfo[1];
+                }
+            }
+            if ($atual->getMessage() !== '') {
+                $partes[] = $atual->getMessage();
+            }
+        }
+
+        $texto = trim(implode(' | ', array_unique($partes)));
+        // mascara credenciais e hosts citados na mensagem
+        $texto = (string) preg_replace("/'[^']*'@'[^']*'/", "'***'@'***'", $texto);
+        $texto = (string) preg_replace("/\bfor user\s+'?[^\s']+'?/i", 'for user ***', $texto);
+        $texto = (string) preg_replace("/\b(?:host|server)\s+'([^']+)'/i", 'host ***', $texto);
+        $texto = (string) preg_replace('/\b\d{1,3}(?:\.\d{1,3}){3}\b/', '***', $texto);
+        $texto = mb_substr($texto, 0, 240);
+
+        $prefixo = [];
+        if ($sqlstate !== '') {
+            $prefixo[] = 'SQLSTATE ' . $sqlstate;
+        }
+        if ($driver !== '') {
+            $prefixo[] = 'código ' . $driver;
+        }
+        $cabeca = $prefixo ? implode(' · ', $prefixo) . ' — ' : '';
+
+        return mb_substr($cabeca . ($texto !== '' ? $texto : get_class($e)), 0, 300);
     }
 
     private static function ehErroDeEstrutura(\Throwable $e): bool
