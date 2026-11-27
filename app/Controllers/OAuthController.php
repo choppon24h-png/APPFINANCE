@@ -21,7 +21,11 @@ class OAuthController extends Controller
         }
 
         if (!OAuthService::isAvailable($provider)) {
-            $this->redirect('/login?erro=oauth_credenciais');
+            Logger::warning('Login social ainda nao configurado', [
+                'provider' => $provider,
+                'dica'     => 'Preencha CLIENT_ID/CLIENT_SECRET no .env (docs/OAUTH_SETUP.md)',
+            ]);
+            $this->redirect('/login?erro=oauth_nao_configurado&provider=' . urlencode($provider));
         }
 
         try {
@@ -38,6 +42,14 @@ class OAuthController extends Controller
     {
         if (!OAuthService::isValidProvider($provider)) {
             $this->redirect('/login?erro=oauth_credenciais');
+        }
+
+        // Banco sem a migration 0004: mensagem clara em vez de 500
+        if (!\App\Core\Schema::accessReady()) {
+            Logger::error('Callback OAuth bloqueado: schema de acesso incompleto', [
+                'faltando' => \App\Core\Schema::missingAccess(),
+            ]);
+            $this->redirect('/login?erro=banco_desatualizado');
         }
 
         // Usuario cancelou na tela do provedor

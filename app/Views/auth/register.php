@@ -17,33 +17,35 @@ $descreve  = static fn(string $campo) => isset($errors[$campo]) ? 'field-error' 
     <div class="auth-alert" role="alert"><span aria-hidden="true">!</span><span><?= htmlspecialchars($errors['form']) ?></span></div>
 <?php endif; ?>
 
-<?php if (!empty($providers)): ?>
-    <div class="oauth-buttons oauth-buttons-top">
-        <?php if (isset($providers['google'])): ?>
-            <a class="button oauth-button" href="/auth/google">
-                <svg viewBox="0 0 24 24" aria-hidden="true" width="18" height="18">
-                    <path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5a5.6 5.6 0 0 1-2.4 3.7v3h3.9c2.3-2.1 3.5-5.2 3.5-8.9z"/>
-                    <path fill="#34A853" d="M12 24c3.2 0 5.9-1.1 7.9-2.9l-3.9-3a7.2 7.2 0 0 1-10.7-3.8H1.3v3.1A12 12 0 0 0 12 24z"/>
-                    <path fill="#FBBC05" d="M5.3 14.3a7.2 7.2 0 0 1 0-4.6V6.6H1.3a12 12 0 0 0 0 10.8l4-3.1z"/>
-                    <path fill="#EA4335" d="M12 4.8c1.8 0 3.4.6 4.6 1.8l3.4-3.4A12 12 0 0 0 1.3 6.6l4 3.1A7.2 7.2 0 0 1 12 4.8z"/>
-                </svg>
-                Cadastrar com Google
-            </a>
-        <?php endif; ?>
-        <?php if (isset($providers['microsoft'])): ?>
-            <a class="button oauth-button" href="/auth/microsoft">
-                <svg viewBox="0 0 24 24" aria-hidden="true" width="18" height="18">
-                    <rect x="2" y="2" width="9" height="9" fill="#F25022"/>
-                    <rect x="13" y="2" width="9" height="9" fill="#7FBA00"/>
-                    <rect x="2" y="13" width="9" height="9" fill="#00A4EF"/>
-                    <rect x="13" y="13" width="9" height="9" fill="#FFB900"/>
-                </svg>
-                Cadastrar com Microsoft
-            </a>
-        <?php endif; ?>
-    </div>
-    <div class="auth-divider"><span>ou preencha seus dados</span></div>
-<?php endif; ?>
+<?php
+$googleOk    = isset($providers['google']);
+$microsoftOk = isset($providers['microsoft']);
+?>
+<div class="oauth-buttons oauth-buttons-top">
+    <a class="button oauth-button<?= $googleOk ? '' : ' oauth-button-pending' ?>" href="/auth/google"
+       title="<?= $googleOk ? 'Cadastrar com Google' : 'Cadastro com Google em ativação' ?>">
+        <svg viewBox="0 0 24 24" aria-hidden="true" width="18" height="18">
+            <path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5a5.6 5.6 0 0 1-2.4 3.7v3h3.9c2.3-2.1 3.5-5.2 3.5-8.9z"/>
+            <path fill="#34A853" d="M12 24c3.2 0 5.9-1.1 7.9-2.9l-3.9-3a7.2 7.2 0 0 1-10.7-3.8H1.3v3.1A12 12 0 0 0 12 24z"/>
+            <path fill="#FBBC05" d="M5.3 14.3a7.2 7.2 0 0 1 0-4.6V6.6H1.3a12 12 0 0 0 0 10.8l4-3.1z"/>
+            <path fill="#EA4335" d="M12 4.8c1.8 0 3.4.6 4.6 1.8l3.4-3.4A12 12 0 0 0 1.3 6.6l4 3.1A7.2 7.2 0 0 1 12 4.8z"/>
+        </svg>
+        Cadastrar com Google
+        <?php if (!$googleOk): ?><span class="oauth-pending-tag">em ativação</span><?php endif; ?>
+    </a>
+    <a class="button oauth-button<?= $microsoftOk ? '' : ' oauth-button-pending' ?>" href="/auth/microsoft"
+       title="<?= $microsoftOk ? 'Cadastrar com Microsoft' : 'Cadastro com Microsoft em ativação' ?>">
+        <svg viewBox="0 0 24 24" aria-hidden="true" width="18" height="18">
+            <rect x="2" y="2" width="9" height="9" fill="#F25022"/>
+            <rect x="13" y="2" width="9" height="9" fill="#7FBA00"/>
+            <rect x="2" y="13" width="9" height="9" fill="#00A4EF"/>
+            <rect x="13" y="13" width="9" height="9" fill="#FFB900"/>
+        </svg>
+        Cadastrar com Microsoft
+        <?php if (!$microsoftOk): ?><span class="oauth-pending-tag">em ativação</span><?php endif; ?>
+    </a>
+</div>
+<div class="auth-divider"><span>ou preencha seus dados</span></div>
 
 <form method="POST" action="/cadastro" class="auth-form auth-form-wide" data-register-form novalidate>
     <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf) ?>">

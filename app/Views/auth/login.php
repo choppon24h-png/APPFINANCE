@@ -46,32 +46,39 @@ $info      = $_GET['info'] ?? '';
     <button type="submit" class="button button-primary" data-submit-label="Entrar">Entrar</button>
 </form>
 
-<?php if (!empty($providers)): ?>
-    <div class="auth-divider"><span>ou</span></div>
-    <div class="oauth-buttons">
-        <?php if (isset($providers['google'])): ?>
-            <a class="button oauth-button" href="/auth/google" data-oauth="google">
-                <svg viewBox="0 0 24 24" aria-hidden="true" width="18" height="18">
-                    <path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5a5.6 5.6 0 0 1-2.4 3.7v3h3.9c2.3-2.1 3.5-5.2 3.5-8.9z"/>
-                    <path fill="#34A853" d="M12 24c3.2 0 5.9-1.1 7.9-2.9l-3.9-3a7.2 7.2 0 0 1-10.7-3.8H1.3v3.1A12 12 0 0 0 12 24z"/>
-                    <path fill="#FBBC05" d="M5.3 14.3a7.2 7.2 0 0 1 0-4.6V6.6H1.3a12 12 0 0 0 0 10.8l4-3.1z"/>
-                    <path fill="#EA4335" d="M12 4.8c1.8 0 3.4.6 4.6 1.8l3.4-3.4A12 12 0 0 0 1.3 6.6l4 3.1A7.2 7.2 0 0 1 12 4.8z"/>
-                </svg>
-                Continuar com Google
-            </a>
-        <?php endif; ?>
-        <?php if (isset($providers['microsoft'])): ?>
-            <a class="button oauth-button" href="/auth/microsoft" data-oauth="microsoft">
-                <svg viewBox="0 0 24 24" aria-hidden="true" width="18" height="18">
-                    <rect x="2" y="2" width="9" height="9" fill="#F25022"/>
-                    <rect x="13" y="2" width="9" height="9" fill="#7FBA00"/>
-                    <rect x="2" y="13" width="9" height="9" fill="#00A4EF"/>
-                    <rect x="13" y="13" width="9" height="9" fill="#FFB900"/>
-                </svg>
-                Continuar com Microsoft
-            </a>
-        <?php endif; ?>
-    </div>
+<?php
+// Os botoes ficam sempre visiveis. Sem credenciais no .env, entram em modo
+// "em ativacao": o clique volta para o login explicando o que falta.
+$googleOk    = isset($providers['google']);
+$microsoftOk = isset($providers['microsoft']);
+?>
+<div class="auth-divider"><span>ou</span></div>
+<div class="oauth-buttons">
+    <a class="button oauth-button<?= $googleOk ? '' : ' oauth-button-pending' ?>" href="/auth/google" data-oauth="google"
+       title="<?= $googleOk ? 'Entrar com Google' : 'Login com Google em ativação' ?>">
+        <svg viewBox="0 0 24 24" aria-hidden="true" width="18" height="18">
+            <path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5a5.6 5.6 0 0 1-2.4 3.7v3h3.9c2.3-2.1 3.5-5.2 3.5-8.9z"/>
+            <path fill="#34A853" d="M12 24c3.2 0 5.9-1.1 7.9-2.9l-3.9-3a7.2 7.2 0 0 1-10.7-3.8H1.3v3.1A12 12 0 0 0 12 24z"/>
+            <path fill="#FBBC05" d="M5.3 14.3a7.2 7.2 0 0 1 0-4.6V6.6H1.3a12 12 0 0 0 0 10.8l4-3.1z"/>
+            <path fill="#EA4335" d="M12 4.8c1.8 0 3.4.6 4.6 1.8l3.4-3.4A12 12 0 0 0 1.3 6.6l4 3.1A7.2 7.2 0 0 1 12 4.8z"/>
+        </svg>
+        Continuar com Google
+        <?php if (!$googleOk): ?><span class="oauth-pending-tag">em ativação</span><?php endif; ?>
+    </a>
+    <a class="button oauth-button<?= $microsoftOk ? '' : ' oauth-button-pending' ?>" href="/auth/microsoft" data-oauth="microsoft"
+       title="<?= $microsoftOk ? 'Entrar com Microsoft' : 'Login com Microsoft em ativação' ?>">
+        <svg viewBox="0 0 24 24" aria-hidden="true" width="18" height="18">
+            <rect x="2" y="2" width="9" height="9" fill="#F25022"/>
+            <rect x="13" y="2" width="9" height="9" fill="#7FBA00"/>
+            <rect x="2" y="13" width="9" height="9" fill="#00A4EF"/>
+            <rect x="13" y="13" width="9" height="9" fill="#FFB900"/>
+        </svg>
+        Continuar com Microsoft
+        <?php if (!$microsoftOk): ?><span class="oauth-pending-tag">em ativação</span><?php endif; ?>
+    </a>
+</div>
+<?php if (!$googleOk && !$microsoftOk): ?>
+    <p class="oauth-note">Login social em ativação. Enquanto isso, use e-mail e senha.</p>
 <?php endif; ?>
 
 <?php if (!empty($registrationOpen)): ?>

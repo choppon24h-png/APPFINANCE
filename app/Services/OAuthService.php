@@ -64,6 +64,20 @@ class OAuthService
         return array_key_exists($provider, self::availableProviders());
     }
 
+    /**
+     * O provedor tem CLIENT_ID e CLIENT_SECRET no .env?
+     * Usado para mostrar os botoes mesmo antes da configuracao (modo "em ativacao").
+     */
+    public static function isConfigured(string $provider): bool
+    {
+        return self::isAvailable($provider);
+    }
+
+    public static function label(string $provider): string
+    {
+        return self::provider($provider)['label'] ?? ucfirst($provider);
+    }
+
     public static function redirectUri(string $provider): string
     {
         $base = rtrim((string) ($_ENV['APP_URL'] ?? ''), '/');

@@ -9,10 +9,13 @@ O fluxo é implementado em PHP puro (`app/Services/OAuthService.php`), sem Compo
 - **cURL** com `CURLOPT_SSL_VERIFYPEER`/`VERIFYHOST` ligados e timeout de 10 segundos.
 - Tokens de acesso **não são gravados** em log nem em banco; apenas o `sub` do provedor é salvo em `user_identities`.
 
-> Enquanto `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` (ou o par equivalente da Microsoft) não estiverem
-> preenchidos no `.env`, os botões **desaparecem** da tela de login automaticamente.
-> Se alguém acessar `/auth/google` diretamente, o sistema volta para `/login` com a mensagem
-> "Login com Google indisponível no momento." e registra a tentativa em `auth_attempts`.
+> Os botões **Google** e **Microsoft** ficam sempre visíveis na tela de login e de cadastro.
+> Enquanto `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` (ou o par equivalente da Microsoft) não
+> estiverem preenchidos no `.env`, eles aparecem com o selo **"em ativação"** e o clique volta
+> para `/login` com a mensagem "O login com Google ainda não está ativado neste servidor. Use
+> e-mail e senha ou fale com o administrador." A tentativa fica registrada em `auth_attempts`
+> e no log. Ao preencher as credenciais, o selo desaparece sozinho — nenhuma alteração de código
+> é necessária.
 
 ---
 

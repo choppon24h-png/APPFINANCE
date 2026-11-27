@@ -75,7 +75,8 @@ class AuthController extends Controller {
         AuditLogger::log('login', 'user', (int) Auth::user()->id, ['provider' => 'local']);
 
         // Perfil incompleto (usuarios criados por OAuth) vai direto completar
-        if ($this->perfilIncompleto()) {
+        // (com banco desatualizado, deixa o painel explicar o que falta)
+        if ($this->perfilIncompleto() && \App\Core\Schema::accessReady()) {
             $this->redirect('/cadastro/completar');
         }
 
@@ -153,7 +154,14 @@ class AuthController extends Controller {
             'sessao_expirada'   => 'Sua sessão expirou. Faça login novamente.',
             'conta_desativada'  => 'Sua conta está desativada. Fale com o administrador.',
             'acesso_restrito'   => 'Faça login para continuar.',
+            'banco_desatualizado' => 'O banco de dados precisa ser atualizado antes de usar o login social. Fale com o administrador.',
         ];
+
+        if ($erro === 'oauth_nao_configurado') {
+            $provedor = (string) ($_GET['provider'] ?? 'social');
+            $nome     = $provedor === 'google' ? 'Google' : ($provedor === 'microsoft' ? 'Microsoft' : 'social');
+            return 'O login com ' . $nome . ' ainda não está ativado neste servidor. Use e-mail e senha ou fale com o administrador.';
+        }
 
         return $mapa[$erro] ?? null;
     }
