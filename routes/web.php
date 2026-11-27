@@ -1,21 +1,57 @@
 <?php
 use App\Core\Router;
+use App\Middlewares\AdminMiddleware;
 use App\Middlewares\AuthMiddleware;
 use App\Middlewares\CsrfMiddleware;
-use App\Middlewares\PermissionMiddleware;
+use App\Middlewares\ProfileCompletionMiddleware;
 use App\Middlewares\SessionTimeoutMiddleware;
+
+/* ------------------------------------------------------------------
+ | Rotas publicas (sem sessao)
+ | ------------------------------------------------------------------ */
+Router::publicRoutes([
+    '/login',
+    '/logout',
+    '/cadastro',
+    '/cadastro/completar',
+    '/termos',
+    '/privacidade',
+    '/auth/*',
+]);
 
 Router::get('/', fn() => header('Location: /dashboard'));
 
 Router::group(['middleware' => [CsrfMiddleware::class]], function () {
     Router::get('/login', 'AuthController@showLogin');
     Router::post('/login', 'AuthController@login');
+
+    Router::get('/cadastro', 'RegisterController@show');
+    Router::post('/cadastro', 'RegisterController@store');
 });
+
 Router::get('/logout', 'AuthController@logout');
 
-Router::group(['middleware' => [AuthMiddleware::class, SessionTimeoutMiddleware::class, CsrfMiddleware::class]], function () {
+// Login social (OAuth 2.0 + PKCE + OIDC)
+Router::get('/auth/{provider}', 'OAuthController@start');
+Router::get('/auth/{provider}/callback', 'OAuthController@callback');
+
+// Paginas institucionais
+Router::get('/termos', 'LegalController@termos');
+Router::get('/privacidade', 'LegalController@privacidade');
+
+/* ------------------------------------------------------------------
+ | Area autenticada
+ | ------------------------------------------------------------------ */
+Router::group([
+    'middleware' => [AuthMiddleware::class, ProfileCompletionMiddleware::class, SessionTimeoutMiddleware::class, CsrfMiddleware::class],
+], function () {
     Router::get('/selecionar-empresa', 'AuthController@selectTenant');
     Router::post('/selecionar-empresa', 'AuthController@setTenant');
+
+    // Conclusao de cadastro (usuarios criados por Google/Microsoft)
+    Router::get('/cadastro/completar', 'RegisterController@completeForm');
+    Router::post('/cadastro/completar', 'RegisterController@completeStore');
+
     Router::get('/dashboard', 'DashboardController@index');
 
     Router::get('/lancamentos', 'TransactionController@index');
@@ -65,13 +101,23 @@ Router::group(['middleware' => [AuthMiddleware::class, SessionTimeoutMiddleware:
         Router::get('/cnpj/{cnpj}', 'CnpjController@consultar');
     });
 
-    Router::group(['prefix' => '/usuarios'], function () {
-        Router::get('', 'UsuariosController@index', [[PermissionMiddleware::class, 'manage_users']]);
-        Router::get('/create', 'UsuariosController@create', [[PermissionMiddleware::class, 'manage_users']]);
-        Router::post('', 'UsuariosController@store', [[PermissionMiddleware::class, 'manage_users']]);
-        Router::get('/{id}/edit', 'UsuariosController@edit', [[PermissionMiddleware::class, 'manage_users']]);
-        Router::post('/{id}/update', 'UsuariosController@update', [[PermissionMiddleware::class, 'manage_users']]);
-        Router::post('/{id}/toggle', 'UsuariosController@toggleStatus', [[PermissionMiddleware::class, 'manage_users']]);
-        Router::post('/{id}/remover', 'UsuariosController@remover', [[PermissionMiddleware::class, 'manage_users']]);
+    // Rota antiga de usuarios: agora aponta para o painel administrativo
+    Router::get('/usuarios', fn() => header('Location: /admin/usuarios'));
+    Router::get('/usuarios/create', fn() => header('Location: /admin/usuarios'));
+
+    /* --------------------------------------------------------------
+     | Painel administrativo (superadmin ou access_admin_panel)
+     | -------------------------------------------------------------- */
+    Router::group(['middleware' => [AdminMiddleware::class]], function () {
+        Router::get('/admin', 'AdminController@index');
+
+        Router::get('/admin/usuarios', 'AdminController@users');
+        Router::get('/admin/usuarios/csv', 'AdminController@usersCsv');
+        Router::get('/admin/usuarios/{id}', 'AdminController@show');
+        Router::post('/admin/usuarios/{id}/atualizar', 'AdminController@update');
+        Router::post('/admin/usuarios/{id}/toggle', 'AdminController@toggle');
+        Router::post('/admin/usuarios/{id}/senha', 'AdminController@resetPassword');
+
+        Router::get('/admin/auditoria', 'AdminController@audit');
     });
 });

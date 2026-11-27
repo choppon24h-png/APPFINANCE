@@ -1,9 +1,13 @@
 <?php
 use App\Core\Auth;
+use App\Core\Flash;
 $usuarioLogado = Auth::user();
 $uriAtual = strtok($_SERVER['REQUEST_URI'], '?');
-$flash = $_SESSION['flash'] ?? null;
-unset($_SESSION['flash']);
+$flash = null;
+$flashPendentes = Flash::pull();
+if ($flashPendentes) {
+    $flash = ['type' => $flashPendentes[0]['type'], 'message' => $flashPendentes[0]['message']];
+}
 $appName = 'SOMASE';
 $menu = [
     ['/dashboard', 'Visão geral', 'home'],
@@ -15,10 +19,15 @@ $menu = [
     ['/centros-custo', 'Centros de custo', 'layers'],
     ['/relatorios', 'Relatórios', 'chart'],
 ];
+$menuAdmin = Auth::canAccessAdmin() ? [
+    ['/admin', 'Visão geral', 'shield'],
+    ['/admin/usuarios', 'Usuários', 'users'],
+    ['/admin/auditoria', 'Auditoria', 'clipboard'],
+] : [];
 
 // Marca apenas o item mais especifico do menu (evita dois itens ativos)
 $hrefAtivo = '';
-foreach (array_column($menu, 0) as $hrefMenu) {
+foreach (array_column(array_merge($menu, $menuAdmin), 0) as $hrefMenu) {
     $casa = $uriAtual === $hrefMenu || str_starts_with($uriAtual, rtrim($hrefMenu, '/') . '/');
     if ($casa && strlen($hrefMenu) > strlen($hrefAtivo)) {
         $hrefAtivo = $hrefMenu;
@@ -64,10 +73,17 @@ foreach (array_column($menu, 0) as $hrefMenu) {
                     <span class="nav-icon" data-icon="<?= $icon ?>" aria-hidden="true"></span><span><?= $label ?></span>
                 </a>
             <?php endforeach; ?>
-            <?php if (Auth::can('manage_users')): ?>
-                <a class="nav-item <?= str_starts_with($uriAtual, '/usuarios') ? 'active' : '' ?>" href="/usuarios"><span class="nav-icon" data-icon="users" aria-hidden="true"></span><span>Usuários</span></a>
-            <?php endif; ?>
         </nav>
+        <?php if ($menuAdmin): ?>
+            <nav class="main-nav nav-admin" aria-label="Administração">
+                <p class="nav-section-title">Administração</p>
+                <?php foreach ($menuAdmin as [$href, $label, $icon]): ?>
+                    <a class="nav-item <?= $hrefAtivo === $href ? 'active' : '' ?>" href="<?= $href ?>"<?= $hrefAtivo === $href ? ' aria-current="page"' : '' ?>>
+                        <span class="nav-icon" data-icon="<?= $icon ?>" aria-hidden="true"></span><span><?= $label ?></span>
+                    </a>
+                <?php endforeach; ?>
+            </nav>
+        <?php endif; ?>
         <div class="sidebar-bottom">
             <div class="user-mini"><span class="avatar"><?= htmlspecialchars(mb_strtoupper(mb_substr($usuarioLogado->name ?? 'U', 0, 1))) ?></span><div><strong><?= htmlspecialchars($usuarioLogado->name ?? '') ?></strong><small><?= htmlspecialchars($usuarioLogado->role_name ?? 'Usuário') ?></small></div></div>
             <a href="/logout" class="logout-link"><span class="nav-icon" data-icon="logout" aria-hidden="true"></span>Sair</a>
@@ -81,8 +97,12 @@ foreach (array_column($menu, 0) as $hrefMenu) {
                 <img src="/assets/icons/icon-192.png" alt="" width="26" height="26" aria-hidden="true">
                 <img src="/assets/brand/somase-wordmark-light.png" alt="SOMASE" width="91" height="20">
             </a>
-            <div class="topbar-title"><span class="eyebrow">SOMASE</span><h1><?= htmlspecialchars($title ?? '') ?></h1></div>
-            <a class="quick-add" href="/lancamentos/novo" aria-label="Novo lançamento"><span aria-hidden="true">+</span><b>Novo</b></a>
+            <div class="topbar-title"><span class="eyebrow"><?= Auth::canAccessAdmin() ? 'SOMASE · Administração' : 'SOMASE' ?></span><h1><?= htmlspecialchars($title ?? '') ?></h1></div>
+            <?php if (Auth::canAccessAdmin() && str_starts_with($uriAtual, '/admin')): ?>
+                <a class="quick-add" href="/admin/usuarios" aria-label="Ver usuários"><span aria-hidden="true">◎</span><b>Usuários</b></a>
+            <?php else: ?>
+                <a class="quick-add" href="/lancamentos/novo" aria-label="Novo lançamento"><span aria-hidden="true">+</span><b>Novo</b></a>
+            <?php endif; ?>
         </header>
         <main class="page-content">
             <?php if ($flash): ?><div class="flash flash-<?= htmlspecialchars($flash['type']) ?>" role="status"><?= htmlspecialchars($flash['message']) ?><button type="button" class="flash-close" data-dismiss aria-label="Fechar aviso">×</button></div><?php endif; ?>

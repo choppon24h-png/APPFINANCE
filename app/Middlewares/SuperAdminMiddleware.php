@@ -2,6 +2,7 @@
 namespace App\Middlewares;
 
 use App\Core\Auth;
+use App\Core\ErrorPage;
 use App\Core\Middleware;
 
 /**
@@ -11,8 +12,7 @@ use App\Core\Middleware;
 class SuperAdminMiddleware extends Middleware {
     public function handle(): void {
         if (!Auth::check() || !Auth::isSuperAdmin()) {
-            http_response_code(403);
-            exit('Acesso restrito ao administrador do sistema.');
+            ErrorPage::forbidden('Acesso restrito ao administrador do sistema.');
         }
     }
 }

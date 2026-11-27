@@ -2,6 +2,7 @@
 namespace App\Middlewares;
 
 use App\Core\Auth;
+use App\Core\ErrorPage;
 use App\Core\Middleware;
 
 class PermissionMiddleware extends Middleware {
@@ -13,8 +14,7 @@ class PermissionMiddleware extends Middleware {
 
     public function handle(): void {
         if (!Auth::can($this->permission)) {
-            http_response_code(403);
-            exit('Acesso negado: permissao insuficiente.');
+            ErrorPage::forbidden('Você não tem a permissão necessária para acessar esta área.');
         }
     }
 }
