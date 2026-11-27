@@ -13,8 +13,9 @@ class Transaction extends Model
         $where = ['t.user_id = :user_id'];
         $params = ['user_id' => $userId];
         if (!empty($filters['search'])) {
-            $where[] = '(t.description LIKE :search OR t.notes LIKE :search)';
-            $params['search'] = '%' . trim($filters['search']) . '%';
+            $where[] = '(t.description LIKE :search_desc OR t.notes LIKE :search_notes)';
+            $params['search_desc']  = '%' . trim($filters['search']) . '%';
+            $params['search_notes'] = '%' . trim($filters['search']) . '%';
         }
         foreach (['type', 'status'] as $field) {
             if (!empty($filters[$field])) {

@@ -307,11 +307,158 @@
         });
     };
 
+
+    /* ---------- cadastro: validação e força da senha ---------- */
+    const initRegister = () => {
+        const form = document.querySelector('[data-register-form]');
+        if (!form) return;
+
+        const name = form.querySelector('#reg-name');
+        const email = form.querySelector('#reg-email');
+        const birth = form.querySelector('#reg-birth');
+        const pass = form.querySelector('#reg-password');
+        const confirm = form.querySelector('#reg-password-confirm');
+        const strength = form.querySelector('[data-strength]');
+        const strengthLabel = strength?.querySelector('.strength-label');
+        const minAge = Number(form.dataset.minAge || 18);
+
+        const setError = (input, message) => {
+            if (!input) return;
+            const field = input.closest('.field');
+            const small = field?.querySelector('small');
+            if (!field || !small) return;
+            field.classList.toggle('has-error', Boolean(message));
+            small.textContent = message || small.dataset.hint || '';
+            small.className = message ? 'field-error' : 'field-hint';
+        };
+
+        // guarda as dicas originais para restaurar
+        form.querySelectorAll('.field > small').forEach((small) => {
+            small.dataset.hint = small.textContent.trim();
+        });
+
+        const idade = (valor) => {
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(valor)) return null;
+            const nasc = new Date(valor + 'T00:00:00');
+            if (Number.isNaN(nasc.getTime())) return null;
+            const hoje = new Date();
+            let anos = hoje.getFullYear() - nasc.getFullYear();
+            const m = hoje.getMonth() - nasc.getMonth();
+            if (m < 0 || (m === 0 && hoje.getDate() < nasc.getDate())) anos--;
+            return anos;
+        };
+
+        const checarNome = () => {
+            const valor = (name.value || '').replace(/\s+/g, ' ').trim();
+            if (valor.length < 3) return 'Informe seu nome completo.';
+            if (valor.length > 120) return 'O nome deve ter até 120 caracteres.';
+            if (valor.split(' ').length < 2) return 'Informe nome e sobrenome.';
+            if (!/^[\p{L}\s'’\-]+$/u.test(valor)) return 'Use apenas letras, espaços, hífen e apóstrofo.';
+            return '';
+        };
+
+        const checarEmail = () => {
+            const valor = (email.value || '').trim().toLowerCase();
+            if (!valor) return 'Informe seu e-mail.';
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(valor)) return 'Informe um e-mail válido.';
+            return '';
+        };
+
+        const checarNascimento = () => {
+            if (!birth.value) return 'Informe sua data de nascimento.';
+            const anos = idade(birth.value);
+            if (anos === null) return 'Informe uma data válida.';
+            if (anos < 0) return 'A data não pode estar no futuro.';
+            if (Number(birth.value.slice(0, 4)) < 1900) return 'Informe um ano a partir de 1900.';
+            if (anos < minAge) return `É necessário ter pelo menos ${minAge} anos.`;
+            return '';
+        };
+
+        const forca = (valor) => {
+            let pontos = 0;
+            if (valor.length >= 8) pontos++;
+            if (/[A-Z]/.test(valor) && /[a-z]/.test(valor)) pontos++;
+            if (/\d/.test(valor)) pontos++;
+            if (/[^A-Za-z0-9]/.test(valor)) pontos++;
+            if (valor.length >= 12 && pontos === 4) pontos = 4;
+            return Math.min(4, pontos);
+        };
+
+        const rotulos = ['Muito fraca', 'Fraca', 'Média', 'Boa', 'Forte'];
+
+        const atualizarForca = () => {
+            if (!strength || !pass) return;
+            const valor = pass.value || '';
+            strength.hidden = valor.length === 0;
+            const nivel = forca(valor);
+            strength.dataset.score = String(nivel);
+            if (strengthLabel) strengthLabel.textContent = valor ? rotulos[nivel] : 'Força da senha';
+        };
+
+        const checarSenha = () => {
+            const valor = pass.value || '';
+            if (valor.length < 8) return 'A senha deve ter pelo menos 8 caracteres.';
+            if (!/[A-Z]/.test(valor)) return 'Inclua pelo menos uma letra maiúscula.';
+            if (!/[a-z]/.test(valor)) return 'Inclua pelo menos uma letra minúscula.';
+            if (!/\d/.test(valor)) return 'Inclua pelo menos um número.';
+            if (!/[^A-Za-z0-9]/.test(valor)) return 'Inclua pelo menos um símbolo.';
+            return '';
+        };
+
+        const checarConfirmacao = () => {
+            if (!confirm.value) return 'Confirme a senha.';
+            if (confirm.value !== pass.value) return 'As senhas não conferem.';
+            return '';
+        };
+
+        const validadores = [
+            [name, checarNome],
+            [email, checarEmail],
+            [birth, checarNascimento],
+            [pass, checarSenha],
+            [confirm, checarConfirmacao],
+        ];
+
+        validadores.forEach(([input, fn]) => {
+            if (!input) return;
+            input.addEventListener('blur', () => setError(input, fn()));
+            input.addEventListener('input', () => {
+                if (input.closest('.field')?.classList.contains('has-error')) {
+                    setError(input, fn());
+                }
+                if (input === pass) {
+                    atualizarForca();
+                    if (confirm.value) setError(confirm, checarConfirmacao());
+                }
+            });
+        });
+
+        form.addEventListener('submit', (event) => {
+            let primeiro = null;
+            validadores.forEach(([input, fn]) => {
+                const erro = fn();
+                setError(input, erro);
+                if (erro && !primeiro) primeiro = input;
+            });
+
+            const termos = form.querySelector('input[name="terms"]');
+            if (termos && !termos.checked) {
+                if (!primeiro) primeiro = termos;
+            }
+
+            if (primeiro) {
+                event.preventDefault();
+                primeiro.focus();
+            }
+        });
+    };
+
     /* ---------- bootstrap ---------- */
     ready(() => {
         initShell();
         initForms();
         initLogin();
+        initRegister();
 
         const charts = document.querySelectorAll('[data-chart="evolution"]');
         const donuts = document.querySelectorAll('[data-chart="donut"]');
