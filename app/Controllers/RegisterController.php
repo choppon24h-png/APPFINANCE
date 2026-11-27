@@ -174,9 +174,24 @@ class RegisterController extends Controller
             Flash::success('Bem-vindo(a) ao SOMASE!');
             $this->redirect('/dashboard');
         } catch (\Throwable $e) {
-            \App\Core\Logger::error('Falha ao cadastrar usuario', ['message' => $e->getMessage()]);
+            // Log completo (request id, SQLSTATE, pilha) para rastrear em /_logs.php
+            $ref = \App\Core\Logger::exception($e, 'Falha ao cadastrar usuario', [
+                'email' => $old['email'],
+                'etapa' => 'insert users',
+            ]);
             AuthAttemptService::record(AuthAttemptService::ACTION_REGISTER, false, $old['email']);
-            $this->renderForm($old, ['form' => 'Não foi possível concluir o cadastro agora. Tente novamente em instantes.']);
+
+            $estrutura = (bool) preg_match('/Unknown column|doesn.t exist|42S22|42S02|1054|1146/i', $e->getMessage());
+            if ($estrutura && !\App\Core\Schema::accessReady()) {
+                $this->renderForm($old, [
+                    'form' => 'O cadastro está temporariamente indisponível porque o banco de dados precisa ser atualizado. Fale com o administrador.',
+                ]);
+                return;
+            }
+
+            $this->renderForm($old, [
+                'form' => 'Não foi possível concluir o cadastro agora. Tente novamente em instantes. Código do erro: ' . $ref . '.',
+            ]);
         }
     }
 

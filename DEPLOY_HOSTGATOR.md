@@ -86,6 +86,23 @@ procedimentos.
 4. `database/migrations/0004_user_registration.sql`
 5. `database/seeds/0001_admin_seed.sql` e `database/seeds/0002_finance_seed.sql`
 
+## 4.1. Pasta de logs (importante para investigar erros)
+
+O sistema grava tudo em `storage/logs/` (`app-AAAA-MM-DD.log`,
+`erros-AAAA-MM-DD.log` e `php_errors.log`). No Gerenciador de Arquivos,
+confirme que `storage/logs` existe e está com permissão **755**.
+
+Se a pasta não aceitar escrita, o PHP grava no diretório temporário do
+servidor e os arquivos não aparecem no painel — a página `/_logs.php` avisa
+quando isso acontece.
+
+Para ler os logs sem SSH, acesse `https://seu-dominio.com.br/_logs.php`
+(logado como administrador ou com `APP_SECRET`). A tela mostra os arquivos,
+filtra por texto e por nível, baixa o log bruto e apaga arquivos com mais de
+30 dias. Cada erro 500 exibe um **código de 8 caracteres**; informe esse
+código na busca para achar a linha exata. **Apague `public/_logs.php` depois
+de usar.**
+
 ## 5. Permissões de pastas
 
 O PHP precisa gravar em `storage/` (sessões, logs, uploads). No Gerenciador

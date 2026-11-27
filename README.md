@@ -88,6 +88,29 @@ Os botões Google e Microsoft ficam sempre visíveis. Enquanto as credenciais n�
 
 Se o código for atualizado antes do banco, o sistema mostra a página "Banco de dados precisa ser atualizado" (503) em vez de erro 500. Abra `/_atualizar.php` (logado como administrador ou com o `APP_SECRET`) para aplicar a migration pendente, ver o estado do ambiente e os últimos erros do log.
 
+## Logs e diagnóstico de erros
+
+Todo erro da aplicação é registrado em `storage/logs/`, em arquivos diários:
+
+| Arquivo | Conteúdo |
+| --- | --- |
+| `app-AAAA-MM-DD.log` | tudo (DEBUG, INFO, WARNING, ERROR), com contexto de cada requisição |
+| `erros-AAAA-MM-DD.log` | somente ERROR/CRITICAL, já com a pilha resumida |
+| `php_errors.log` | erros nativos do PHP (`error_log` do php.ini) |
+
+Cada linha traz data/hora, nível e um **código de requisição de 8 caracteres** (`request_id`), além de método, rota, IP e usuário. O mesmo código aparece na tela de erro 500 ("Código do erro: A15D5388"), então dá para achar a falha exata no log sem adivinhar. Senhas, tokens CSRF e cookies são mascarados (`***`) antes de gravar.
+
+O tratamento é centralizado em `app/Core/ErrorHandler.php`: ele captura exceções, warnings e erros fatais e escolhe a página correta — **503 "Banco de dados precisa ser atualizado"** quando falta a migration 0004, **503 "Banco de dados indisponível"** quando a conexão falha e **500 com código de referência** nos demais casos. O front controller (`public/index.php`) também roda dentro de `try/catch`, então nada escapa sem log.
+
+Para ler os logs no servidor (sem SSH), abra `/_logs.php` logado como administrador ou informe o `APP_SECRET`:
+
+- lista os arquivos, com tamanho e data;
+- mostra as últimas 100/300/1.000/5.000 linhas, com filtro por texto (código do erro, e-mail, rota) e por nível (erros/avisos);
+- permite baixar o arquivo bruto e apagar logs com mais de 30 dias;
+- avisa quando `storage/logs` está sem permissão de escrita.
+
+Se `storage/logs` não for gravável, o Logger tenta criá-la com 0755 e, em último caso, grava no diretório temporário do PHP — a aplicação nunca quebra por causa do log.
+
 ## Desenvolvimento local
 
 1. Copie `.env.example` para `.env` e configure um banco MySQL/MariaDB local.

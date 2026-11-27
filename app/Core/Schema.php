@@ -40,7 +40,12 @@ class Schema
 
         try {
             $pdo = Database::getInstance();
-            $banco = (string) ($_ENV['DB_DATABASE'] ?? '');
+            // Usa o banco realmente conectado (evita falso negativo quando
+            // DB_DATABASE nao esta no .env ou o host usa prefixo do cPanel)
+            $banco = (string) $pdo->query('SELECT DATABASE()')->fetchColumn();
+            if ($banco === '') {
+                $banco = (string) ($_ENV['DB_DATABASE'] ?? '');
+            }
 
             $stmt = $pdo->prepare("
                 SELECT TABLE_NAME

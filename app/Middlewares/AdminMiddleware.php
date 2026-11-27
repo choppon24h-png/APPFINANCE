@@ -21,7 +21,7 @@ class AdminMiddleware extends Middleware
 
         // Codigo novo + banco sem a migration 0004: 503 explicativo, nunca 500
         if (!Schema::accessReady()) {
-            ErrorPage::outdatedSchema(Schema::missingLabel());
+            ErrorPage::outdatedSchema(Schema::missingLabel(), \App\Core\Logger::requestId());
         }
 
         if (!Auth::canAccessAdmin()) {

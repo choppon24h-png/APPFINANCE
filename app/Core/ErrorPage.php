@@ -13,7 +13,7 @@ class ErrorPage
     /**
      * Renderiza a pagina e encerra a requisicao.
      */
-    public static function render(int $status, string $title, string $message, string $hint = '', array $debug = [], array $actions = []): void
+    public static function render(int $status, string $title, string $message, string $hint = '', array $debug = [], array $actions = [], string $ref = ''): void
     {
         if (!headers_sent()) {
             http_response_code($status);
@@ -37,6 +37,12 @@ class ErrorPage
             $classe = $actionsHtml === '' ? 'button' : 'button ghost';
             $actionsHtml .= '<a class="' . $classe . '" href="' . htmlspecialchars($url, ENT_QUOTES, 'UTF-8') . '">'
                 . htmlspecialchars($rotulo, ENT_QUOTES, 'UTF-8') . '</a>';
+        }
+
+        $refHtml = '';
+        if ($ref !== '') {
+            $refHtml = '<p class="ref">Código do erro: <strong>' . htmlspecialchars($ref, ENT_QUOTES, 'UTF-8')
+                . '</strong> — informe este código ao suporte ou consulte <code>/_logs.php</code>.</p>';
         }
 
         echo <<<HTML
@@ -77,6 +83,8 @@ class ErrorPage
         background: #1f6fe0; color: #fff; box-shadow: 0 12px 26px rgba(31,111,224,.35);
     }
     a.ghost { background: transparent; color: #cfe0ff; border: 1px solid #2b4a7d; box-shadow: none; }
+    p.ref { margin-top: 14px; font-size: 12px; color: #8ea3c4; }
+    p.ref code { background: rgba(59,139,255,.14); padding: 1px 5px; border-radius: 5px; color: #cfe0ff; }
     .err-debug { margin-top: 18px; padding: 14px; border-radius: 12px; background: #050b16; border: 1px solid #1f3560; color: #8ea3c4; font-size: 11px; overflow: auto; }
     footer { margin-top: 24px; font-size: 11px; color: #6d82a6; }
 </style>
@@ -88,6 +96,7 @@ class ErrorPage
         <h1>{$title}</h1>
         <p>{$message}</p>
         {$hint}
+        {$refHtml}
         {$debugHtml}
         <div class="actions">
             {$actionsHtml}
@@ -128,7 +137,7 @@ HTML;
     /**
      * Codigo novo + banco antigo: explica o que fazer em vez de 500.
      */
-    public static function outdatedSchema(string $faltando = ''): void
+    public static function outdatedSchema(string $faltando = '', string $ref = ''): void
     {
         $detalhe = $faltando !== '' ? ' Pendências: ' . $faltando . '.' : '';
 
@@ -138,18 +147,39 @@ HTML;
             'O sistema já está na versão nova, mas o banco ainda não recebeu a atualização da etapa de acesso.' . $detalhe,
             'Abra /_atualizar.php neste domínio (logado como administrador) e clique em “Aplicar atualização do banco”. O procedimento é seguro e pode ser repetido quantas vezes precisar.',
             [],
-            ['Abrir atualizador' => '/_atualizar.php', 'Ir para o login' => '/login']
+            ['Abrir atualizador' => '/_atualizar.php', 'Ver logs' => '/_logs.php', 'Ir para o login' => '/login'],
+            $ref
         );
     }
 
-    public static function serverError(\Throwable $e): void
+    public static function serverError(\Throwable $e, string $ref = ''): void
     {
         self::render(
             500,
             'Erro interno',
-            'Algo deu errado ao processar sua solicitação. A equipe já foi notificada pelo log do servidor.',
-            '',
-            ['exception' => $e->getMessage(), 'file' => $e->getFile() . ':' . $e->getLine()]
+            'Algo deu errado ao processar sua solicitação. O ocorrido foi registrado no log do servidor.',
+            'Se precisar de ajuda, informe o código abaixo: ele identifica exatamente esta falha no log.',
+            ['exception' => $e->getMessage(), 'file' => $e->getFile() . ':' . $e->getLine()],
+            [],
+            $ref
+        );
+    }
+
+    /**
+     * 503 para falha de estrutura do banco que nao seja exatamente a 0004
+     * (ex.: tabela removida ou coluna ausente de outra versao).
+     */
+    public static function databaseStructure(string $detalhe = '', string $ref = ''): void
+    {
+        self::render(
+            503,
+            'Banco de dados inconsistente',
+            'A consulta falhou porque o banco não tem a estrutura esperada por esta versão do sistema.'
+                . ($detalhe !== '' ? ' Detalhe técnico: ' . $detalhe : ''),
+            'Abra /_atualizar.php para conferir o schema e aplicar as atualizações pendentes. Se o problema continuar, verifique /_logs.php.',
+            [],
+            ['Abrir atualizador' => '/_atualizar.php', 'Ver logs' => '/_logs.php', 'Ir para o login' => '/login'],
+            $ref
         );
     }
 }

@@ -185,6 +185,8 @@ foreach ($linhas as $grupo) {
         Precisa aplicar a atualizacao do banco (migration 0004)?
         <a href="/_atualizar.php" style="color:#5aa2ff;font-weight:700">Abrir o atualizador</a>
         (pede APP_SECRET ou aproveita a sessao de administrador).
+        Para investigar um erro 500, abra os
+        <a href="/_logs.php" style="color:#5aa2ff;font-weight:700">logs do sistema</a>.
     </p>
 
     <?php foreach ($linhas as $grupo => $itens): ?>

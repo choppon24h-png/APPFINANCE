@@ -136,7 +136,7 @@ if ($autorizado && $pdo && ($_POST['acao'] ?? '') === 'aplicar') {
             $mensagens[] = 'Atualização concluída. Recarregue o sistema e teste o cadastro e o painel.';
         }
         @file_put_contents(
-            BASE_PATH . '/storage/logs/app.log',
+            BASE_PATH . '/storage/logs/app-' . date('Y-m-d') . '.log',
             '[' . date('Y-m-d H:i:s') . '] [INFO] Migration 0004 aplicada via _atualizar.php | '
                 . json_encode(['comandos' => $ok, 'erros' => $erros], JSON_UNESCAPED_UNICODE) . PHP_EOL,
             FILE_APPEND
@@ -198,16 +198,20 @@ if ($pdo) {
     }
 }
 
-// Últimos erros do log (sem credenciais)
+// Últimos erros do log (arquivos diarios app-AAAA-MM-DD.log + legado app.log)
 $logLinhas = [];
-$logPath = BASE_PATH . '/storage/logs/app.log';
-if (is_file($logPath)) {
-    $todas = file($logPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: [];
+$arquivosLog = glob(BASE_PATH . '/storage/logs/app-*.log') ?: [];
+usort($arquivosLog, static fn ($a, $b) => filemtime($b) <=> filemtime($a));
+if (is_file(BASE_PATH . '/storage/logs/app.log')) {
+    $arquivosLog[] = BASE_PATH . '/storage/logs/app.log';
+}
+foreach ($arquivosLog as $logPath) {
+    $todas = @file($logPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: [];
     foreach (array_reverse($todas) as $linha) {
         if (stripos($linha, '[ERROR]') !== false || stripos($linha, '[WARNING]') !== false) {
             $logLinhas[] = mb_substr($linha, 0, 400);
             if (count($logLinhas) >= 25) {
-                break;
+                break 2;
             }
         }
     }
@@ -275,7 +279,8 @@ if (is_file($logPath)) {
             <p class="foot">Se você já está logado como administrador no SOMASE, abra esta página no mesmo navegador — não é preciso digitar nada.</p>
         </div>
     <?php else: ?>
-        <p class="foot">Acesso liberado por: <?= htmlspecialchars($motivoAuth) ?>.</p>
+        <p class="foot">Acesso liberado por: <?= htmlspecialchars($motivoAuth) ?>.
+            · <a href="/_logs.php" style="color:#8fb6ff;font-weight:700">Ver logs do sistema</a></p>
 
         <h2>Ambiente</h2>
         <div class="card">

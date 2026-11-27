@@ -131,18 +131,9 @@ class Router {
         ErrorPage::notFound();
     }
 
-    private static function handleError(\Throwable $e): void {
-        Logger::error('Erro nao tratado na rota', [
-            'exception' => $e->getMessage(),
-            'file'      => $e->getFile(),
-            'line'      => $e->getLine(),
-        ]);
-
-        // Banco fora do ar => 503 (servico indisponivel), nao 500
-        if ($e instanceof DatabaseException || $e->getPrevious() instanceof \PDOException) {
-            ErrorPage::unavailable('Não foi possível falar com o banco de dados agora. Tente novamente em alguns instantes.');
-        }
-
-        ErrorPage::serverError($e);
+    private static function handleError(\Throwable $e): void
+    {
+        // Log completo + escolha da pagina (503 de schema, 503 de conexao ou 500)
+        ErrorHandler::render($e);
     }
 }
