@@ -1,8 +1,12 @@
 <?php
 namespace App\Controllers;
 
+use App\Core\Audit\AuditLogger;
 use App\Core\Auth;
 use App\Core\Controller;
+use App\Core\Flash;
+use App\Services\AuthAttemptService;
+use App\Services\OAuthService;
 
 class AuthController extends Controller {
 
@@ -12,51 +16,80 @@ class AuthController extends Controller {
         }
 
         if (Auth::check()) {
-            $this->redirect('/dashboard');
+            $this->redirect(Auth::canAccessAdmin() ? '/admin' : '/dashboard');
         }
 
-        $this->view('auth/login', ['title' => 'Login'], 'auth');
+        $this->view('auth/login', [
+            'title'            => 'Entrar',
+            'error'            => $this->mensagemErro(),
+            'providers'        => OAuthService::availableProviders(),
+            'registrationOpen' => $this->registrationOpen(),
+            'csrf'             => $this->csrfToken(),
+        ], 'auth');
     }
 
     public function login(): void {
-        if (empty($_SESSION['csrf_token'])) {
-            $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-        }
+        $email    = mb_strtolower(trim((string) ($_POST['email'] ?? '')));
+        $password = (string) ($_POST['password'] ?? '');
 
-        $email    = trim($_POST['email'] ?? '');
-        $password = $_POST['password'] ?? '';
+        $render = function (string $erro, array $extra = []) use ($email) {
+            $this->view('auth/login', array_merge([
+                'title'            => 'Entrar',
+                'error'            => $erro,
+                'email'            => $email,
+                'providers'        => OAuthService::availableProviders(),
+                'registrationOpen' => $this->registrationOpen(),
+                'csrf'             => $this->csrfToken(),
+            ], $extra), 'auth');
+        };
 
-        if (!$email || !$password) {
-            $this->view('auth/login', [
-                'title' => 'Login',
-                'error' => 'Preencha todos os campos.',
-            ], 'auth');
+        if ($email === '' || $password === '') {
+            $render('Informe e-mail e senha para entrar.');
             return;
         }
 
-        if (!Auth::login($email, $password)) {
-            $this->view('auth/login', [
-                'title' => 'Login',
-                'error' => 'E-mail ou senha incorretos.',
-            ], 'auth');
+        // Rate-limit por IP + e-mail
+        $bloqueio = AuthAttemptService::loginLockMinutes($email);
+        if ($bloqueio > 0) {
+            AuthAttemptService::record(AuthAttemptService::ACTION_LOGIN, false, $email);
+            $render('Muitas tentativas. Tente novamente em ' . $bloqueio . ' minutos.');
             return;
         }
 
-        if (Auth::isSuperAdmin()) {
-            $this->redirect('/dashboard');
+        $resultado = Auth::login($email, $password);
+
+        if ($resultado !== 'ok') {
+            AuthAttemptService::record(AuthAttemptService::ACTION_LOGIN, false, $email);
+
+            if ($resultado === 'inactive') {
+                $render('Sua conta está desativada. Fale com o administrador.');
+                return;
+            }
+
+            // Mensagem generica: nao revela se o e-mail existe
+            $render('E-mail ou senha incorretos.');
+            return;
         }
 
-        // Multi-tenant: se o usuario pertence a mais de uma organizacao, pede pra escolher
-        $tenants = Auth::userTenants();
+        AuthAttemptService::record(AuthAttemptService::ACTION_LOGIN, true, $email);
+        AuditLogger::log('login', 'user', (int) Auth::user()->id, ['provider' => 'local']);
 
-        if (count($tenants) > 1) {
+        // Perfil incompleto (usuarios criados por OAuth) vai direto completar
+        if ($this->perfilIncompleto()) {
+            $this->redirect('/cadastro/completar');
+        }
+
+        if (count(Auth::userTenants()) > 1) {
             $this->redirect('/selecionar-empresa');
         }
 
-        $this->redirect('/dashboard');
+        $this->redirect(Auth::canAccessAdmin() ? '/admin' : '/dashboard');
     }
 
     public function logout(): void {
+        if (Auth::check()) {
+            AuditLogger::log('logout', 'user', (int) Auth::user()->id);
+        }
         Auth::logout();
         $this->redirect('/login');
     }
@@ -96,5 +129,32 @@ class AuthController extends Controller {
 
         Auth::setTenant($tenantId);
         $this->redirect('/dashboard');
+    }
+
+    /* ------------------------------------------------------------------ */
+
+    private function registrationOpen(): bool {
+        return ($_ENV['REGISTRATION_ENABLED'] ?? 'true') !== 'false';
+    }
+
+    private function perfilIncompleto(): bool {
+        $user = Auth::user();
+        return $user && (empty($user->birth_date) || empty($user->terms_accepted_at));
+    }
+
+    private function mensagemErro(): ?string {
+        $erro = $_GET['erro'] ?? '';
+
+        $mapa = [
+            'oauth_cancelado'   => 'O login social foi cancelado. Tente novamente ou use e-mail e senha.',
+            'oauth_credenciais' => 'Não foi possível concluir o login social. Tente novamente.',
+            'oauth_email'       => 'O provedor não retornou um e-mail verificado. Use e-mail e senha.',
+            'oauth_state'       => 'Sessão de login social expirada. Tente novamente.',
+            'sessao_expirada'   => 'Sua sessão expirou. Faça login novamente.',
+            'conta_desativada'  => 'Sua conta está desativada. Fale com o administrador.',
+            'acesso_restrito'   => 'Faça login para continuar.',
+        ];
+
+        return $mapa[$erro] ?? null;
     }
 }
