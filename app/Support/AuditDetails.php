@@ -24,16 +24,25 @@ class AuditDetails
         $partes = [];
         foreach ($dados as $chave => $valor) {
             if (is_array($valor)) {
-                $valor = json_encode($valor, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                $internos = [];
+                foreach ($valor as $k => $v) {
+                    if ($v === '' || $v === null) {
+                        continue;
+                    }
+                    $internos[] = $k . '=' . (is_array($v) ? json_encode($v, JSON_UNESCAPED_UNICODE) : $v);
+                }
+                $valor = $internos ? implode(', ', $internos) : '';
             } elseif (is_bool($valor)) {
                 $valor = $valor ? 'sim' : 'não';
-            } elseif ($valor === null) {
-                $valor = '—';
+            }
+
+            if ($valor === null || $valor === '') {
+                continue;
             }
 
             $partes[] = $chave . ': ' . $valor;
         }
 
-        return mb_substr(implode(' · ', $partes), 0, $limite);
+        return $partes ? mb_substr(implode(' · ', $partes), 0, $limite) : '—';
     }
 }
