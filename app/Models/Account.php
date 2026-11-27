@@ -30,15 +30,16 @@ class Account extends Model
     {
         $stmt = $this->pdo->prepare(
             'INSERT INTO accounts
-                (user_id, name, bank_name, account_type, agency, account_number,
+                (user_id, name, bank_name, bank_code, account_type, agency, account_number,
                  initial_balance, current_balance, initial_date, status, notes)
-             VALUES (:user_id, :name, :bank_name, :account_type, :agency, :account_number,
+             VALUES (:user_id, :name, :bank_name, :bank_code, :account_type, :agency, :account_number,
                      :initial_balance, :current_balance, :initial_date, :status, :notes)'
         );
         $stmt->execute([
             'user_id' => $userId,
             'name' => $data['name'],
             'bank_name' => $data['bank_name'],
+            'bank_code' => $data['bank_code'] ?? null,
             'account_type' => $data['account_type'],
             'agency' => $data['agency'],
             'account_number' => $data['account_number'],
@@ -54,7 +55,7 @@ class Account extends Model
     public function update(int $id, int $userId, array $data): bool
     {
         $stmt = $this->pdo->prepare(
-            'UPDATE accounts SET name = :name, bank_name = :bank_name, account_type = :account_type,
+            'UPDATE accounts SET name = :name, bank_name = :bank_name, bank_code = :bank_code, account_type = :account_type,
                 agency = :agency, account_number = :account_number, status = :status, notes = :notes
              WHERE id = :id AND user_id = :user_id'
         );

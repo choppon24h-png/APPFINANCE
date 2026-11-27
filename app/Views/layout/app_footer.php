@@ -9,6 +9,7 @@
     </div>
 </div>
 <script src="/assets/js/app.js"></script>
+<script src="/assets/js/bank-autocomplete.js"></script>
 <script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(function () {});</script>
 </body>
 </html>

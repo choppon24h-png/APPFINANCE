@@ -27,13 +27,13 @@ def clean(sql: str) -> str:
 estrutura = clean(run(DUMP + ["--no-data", DB]).stdout)
 dados = clean(run(DUMP + ["--no-create-info", "--complete-insert", "--skip-extended-insert",
                           DB, "roles", "permissions", "role_permissions",
-                          "categories", "cost_centers"]).stdout)
+                          "categories", "cost_centers", "banks"]).stdout)
 
 HEADER_INSTALL = """-- ============================================================
 -- SOMASE — Controle Financeiro
 -- INSTALACAO COMPLETA DO BANCO (MySQL 5.7+ / MySQL 8 / MariaDB 10.3+)
--- Gerado em 2026-11-27 a partir do banco de desenvolvimento ja com a
--- migration 0004 (cadastro, OAuth e painel administrativo) aplicada.
+-- Gerado em 2026-11-27 a partir do banco de desenvolvimento ja com as
+-- migrations 0004 (cadastro, OAuth, painel) e 0005 (catalogo de bancos).
 --
 -- O QUE ESTE ARQUIVO FAZ
 --   * cria as 20 tabelas do sistema (financeiro + acesso);
@@ -215,6 +215,37 @@ SELECT
 
 SELECT 'Atualizacao concluida. Abra /login e entre com sua conta.' AS resultado;
 """
+# ---------- 0005: catalogo de bancos (ALTERs idempotentes) ----------
+migracao_bancos = (RAIZ / "database" / "migrations" / "0005_banks.sql").read_text(encoding="utf-8")
+corpo_bancos = "\n".join(
+    linha for linha in migracao_bancos.splitlines()
+    if not linha.lstrip().startswith("--") and linha.strip() not in ("", "SET NAMES utf8mb4;")
+)
+coluna_bank_code = """SET @sql := (SELECT IF(COUNT(*) = 0,
+        'ALTER TABLE `accounts` ADD COLUMN `bank_code` CHAR(3) NULL AFTER `bank_name`',
+        'DO 0')
+    FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'accounts' AND COLUMN_NAME = 'bank_code');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;"""
+indice_bank_code = """SET @sql := (SELECT IF(COUNT(*) = 0,
+        'ALTER TABLE `accounts` ADD INDEX `idx_accounts_bank` (`bank_code`)',
+        'DO 0')
+    FROM information_schema.STATISTICS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'accounts' AND INDEX_NAME = 'idx_accounts_bank');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;"""
+corpo_bancos = corpo_bancos.replace(
+    "ALTER TABLE `accounts` ADD COLUMN `bank_code` CHAR(3) NULL AFTER `bank_name`;", coluna_bank_code)
+corpo_bancos = corpo_bancos.replace(
+    "ALTER TABLE `accounts` ADD INDEX `idx_accounts_bank` (`bank_code`);", indice_bank_code)
+
+atualizacao += """
+-- ============================================================
+-- 0005 — CATALOGO DE BANCOS BRASILEIROS (codigo COMPE)
+-- Alimenta o autocomplete do formulario de conta.
+-- Idempotente: pode ser executado novamente sem duplicar registros.
+-- ============================================================
+""" + corpo_bancos + "\n"
+
 (OUT / "somase_atualizar_banco.sql").write_text(atualizacao)
 
 # ---------------------------------------------------------------- completo com demo

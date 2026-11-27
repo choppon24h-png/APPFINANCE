@@ -99,6 +99,8 @@ Router::group([
 
     Router::group(['prefix' => '/api'], function () {
         Router::get('/cnpj/{cnpj}', 'CnpjController@consultar');
+        // Autocomplete de bancos (catalogo COMPE da migration 0005)
+        Router::get('/bancos', 'BankController@search');
     });
 
     // Rota antiga de usuarios: agora aponta para o painel administrativo

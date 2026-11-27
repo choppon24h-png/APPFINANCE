@@ -84,6 +84,7 @@ class AccountController extends Controller
         $data = [
             'name' => FinanceInput::text($input['name'] ?? null, 'Nome da conta', 120),
             'bank_name' => FinanceInput::text($input['bank_name'] ?? null, 'Banco', 120, false),
+            'bank_code' => $this->bankCode($input['bank_code'] ?? null, $input['bank_name'] ?? null),
             'account_type' => FinanceInput::enum($input['account_type'] ?? 'checking', 'Tipo de conta', ['checking','savings','investment','cash','other'], 'checking'),
             'agency' => FinanceInput::text($input['agency'] ?? null, 'Agência', 40, false),
             'account_number' => FinanceInput::text($input['account_number'] ?? null, 'Número da conta', 80, false),
@@ -95,6 +96,30 @@ class AccountController extends Controller
             $data['initial_date'] = FinanceInput::date($input['initial_date'] ?? date('Y-m-d'), 'Data do saldo inicial', true);
         }
         return $data;
+    }
+
+    /**
+     * Codigo COMPE da instituicao. Aceita apenas 3 digitos; quando o campo
+     * vem vazio (texto livre), tenta descobrir pelo nome digitado.
+     */
+    private function bankCode(mixed $codigo, mixed $nome): ?string
+    {
+        $digitos = preg_replace('/\D/', '', (string) $codigo);
+        if ($digitos !== '' && strlen($digitos) <= 3) {
+            return str_pad($digitos, 3, '0', STR_PAD_LEFT);
+        }
+
+        $nome = trim((string) $nome);
+        if ($nome === '') {
+            return null;
+        }
+
+        try {
+            $achado = (new \App\Models\Bank())->search($nome, 1);
+            return $achado !== [] ? (string) ($achado[0]->compe ?? '') ?: null : null;
+        } catch (Throwable $e) {
+            return null;
+        }
     }
 
     private function flash(string $type, string $message): void { $_SESSION['flash'] = ['type' => $type, 'message' => $message]; }

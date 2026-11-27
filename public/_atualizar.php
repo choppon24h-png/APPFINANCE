@@ -127,13 +127,17 @@ if ($autorizado && $pdo && ($_POST['acao'] ?? '') === 'aplicar') {
     if (!hash_equals($token, (string) ($_POST['token'] ?? ''))) {
         $erro = 'Sessão expirada. Recarregue a página e tente novamente.';
     } else {
-        [$ok, $erros] = aplicarSql($pdo, BASE_PATH . '/database/migrations/0004_user_registration.sql');
-        $mensagens[] = $ok . ' comando(s) aplicado(s) na migration 0004.';
-        foreach ($erros as $e) {
-            $mensagens[] = 'Falha: ' . $e;
+        $totalErros = 0;
+        foreach (['0004_user_registration.sql', '0005_banks.sql'] as $arquivo) {
+            [$ok, $erros] = aplicarSql($pdo, BASE_PATH . '/database/migrations/' . $arquivo);
+            $mensagens[] = $arquivo . ': ' . $ok . ' comando(s) aplicado(s).';
+            foreach ($erros as $e) {
+                $mensagens[] = 'Falha em ' . $arquivo . ': ' . $e;
+                $totalErros++;
+            }
         }
-        if (!$erros) {
-            $mensagens[] = 'Atualização concluída. Recarregue o sistema e teste o cadastro e o painel.';
+        if ($totalErros === 0) {
+            $mensagens[] = 'Atualização concluída. Recarregue o sistema e teste o cadastro, o painel e o campo de banco.';
         }
         @file_put_contents(
             BASE_PATH . '/storage/logs/app-' . date('Y-m-d') . '.log',
@@ -173,7 +177,7 @@ if ($pdo) {
         $stmt = $pdo->prepare('SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = :b');
         $stmt->execute(['b' => $banco]);
         $tabelas = array_map('strtolower', $stmt->fetchAll(PDO::FETCH_COLUMN));
-        foreach (['user_identities', 'auth_attempts'] as $t) {
+        foreach (['user_identities', 'auth_attempts', 'banks'] as $t) {
             if (!in_array($t, $tabelas, true)) {
                 $faltando[] = 'tabela ' . $t;
             }
@@ -184,6 +188,18 @@ if ($pdo) {
         foreach (['birth_date', 'auth_provider', 'avatar_url', 'email_verified_at', 'terms_accepted_at', 'registration_ip'] as $c) {
             if (!in_array($c, $colunas, true)) {
                 $faltando[] = 'users.' . $c;
+            }
+        }
+        $stmt = $pdo->prepare("SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = :b AND TABLE_NAME = 'accounts'");
+        $stmt->execute(['b' => $banco]);
+        $colunasContas = array_map('strtolower', $stmt->fetchAll(PDO::FETCH_COLUMN));
+        if (!in_array('bank_code', $colunasContas, true)) {
+            $faltando[] = 'accounts.bank_code';
+        }
+        if (in_array('banks', $tabelas, true)) {
+            $totalBancos = (int) $pdo->query('SELECT COUNT(*) FROM banks')->fetchColumn();
+            if ($totalBancos < 100) {
+                $faltando[] = 'catalogo de bancos incompleto (' . $totalBancos . ')';
             }
         }
         if (in_array('permissions', $tabelas, true)) {
