@@ -1,7 +1,8 @@
-const CACHE_NAME = 'somase-static-v4';
+const CACHE_NAME = 'somase-static-v5';
 const STATIC_ASSETS = [
     '/assets/css/app.css',
     '/assets/js/app.js',
+    '/assets/js/bank-autocomplete.js',
     '/assets/brand/somase-wordmark-light.png',
     '/assets/brand/somase-logo-horizontal-light.png',
     '/assets/icons/icon-192.png',
