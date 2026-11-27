@@ -34,7 +34,7 @@ $info      = $_GET['info'] ?? '';
         <span class="auth-field">
             <span class="field-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="10.5" width="16" height="10" rx="2.5"/><path d="M8 10.5V7.8a4 4 0 0 1 8 0v2.7"/></svg></span>
             <input type="password" name="password" id="login-password" placeholder="Sua senha" autocomplete="current-password" required>
-            <button type="button" class="field-toggle" data-toggle-password aria-controls="login-password" aria-pressed="false">mostrar</button>
+            <button type="button" class="field-toggle" data-toggle-password aria-controls="login-password" aria-pressed="false" aria-label="mostrar senha">mostrar</button>
         </span>
     </label>
 

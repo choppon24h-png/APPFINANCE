@@ -267,20 +267,47 @@
         }
     };
 
+    /* ---------- mostrar/ocultar senha (qualquer tela) ---------- */
+    // Delegacao de evento: cobre login, cadastro, confirmação de senha e
+    // qualquer campo futuro com o atributo data-toggle-password.
+    const initPasswordToggles = () => {
+        document.addEventListener('click', (event) => {
+            const toggle = event.target.closest('[data-toggle-password]');
+            if (!toggle) return;
+            event.preventDefault();
+
+            const alvoId = toggle.getAttribute('aria-controls');
+            const campo = toggle.closest('.field');
+            const input = (alvoId && document.getElementById(alvoId))
+                || campo?.querySelector('input')
+                || toggle.closest('form')?.querySelector('input[type="password"], input[data-password-visible="true"]');
+            if (!input) return;
+
+            const visivel = input.type === 'text';
+            input.type = visivel ? 'password' : 'text';
+            input.dataset.passwordVisible = visivel ? 'false' : 'true';
+
+            const rotulo = visivel ? 'mostrar' : 'ocultar';
+            toggle.textContent = rotulo;
+            toggle.setAttribute('aria-pressed', String(!visivel));
+            toggle.setAttribute('aria-label', rotulo + ' senha');
+            toggle.classList.toggle('is-visible', !visivel);
+
+            // Mantem o cursor no fim do texto ao alternar a visibilidade
+            try {
+                const fim = input.value.length;
+                input.focus({ preventScroll: true });
+                input.setSelectionRange(fim, fim);
+            } catch (error) {
+                input.focus({ preventScroll: true });
+            }
+        });
+    };
+
     /* ---------- login ---------- */
     const initLogin = () => {
         const form = document.querySelector('[data-login-form]');
         if (!form) return;
-
-        const password = form.querySelector('#login-password');
-        const toggle = form.querySelector('[data-toggle-password]');
-        toggle?.addEventListener('click', () => {
-            const visible = password.type === 'text';
-            password.type = visible ? 'password' : 'text';
-            toggle.textContent = visible ? 'mostrar' : 'ocultar';
-            toggle.setAttribute('aria-pressed', String(!visible));
-            password.focus({ preventScroll: true });
-        });
 
         const email = form.querySelector('#login-email');
         const remember = form.querySelector('[data-remember-email]');
@@ -457,6 +484,7 @@
     ready(() => {
         initShell();
         initForms();
+        initPasswordToggles();
         initLogin();
         initRegister();
 

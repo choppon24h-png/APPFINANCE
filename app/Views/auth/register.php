@@ -76,7 +76,7 @@ $microsoftOk = isset($providers['microsoft']);
         <span class="auth-field">
             <span class="field-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="10.5" width="16" height="10" rx="2.5"/><path d="M8 10.5V7.8a4 4 0 0 1 8 0v2.7"/></svg></span>
             <input type="password" name="password" id="reg-password" placeholder="Mínimo de 8 caracteres" autocomplete="new-password" required minlength="8" data-validate="password">
-            <button type="button" class="field-toggle" data-toggle-password aria-controls="reg-password" aria-pressed="false">mostrar</button>
+            <button type="button" class="field-toggle" data-toggle-password aria-controls="reg-password" aria-pressed="false" aria-label="mostrar senha">mostrar</button>
         </span>
         <span class="strength" data-strength hidden>
             <span class="strength-bars"><i></i><i></i><i></i><i></i></span>
@@ -90,6 +90,7 @@ $microsoftOk = isset($providers['microsoft']);
         <span class="auth-field">
             <span class="field-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="10.5" width="16" height="10" rx="2.5"/><path d="M8 10.5V7.8a4 4 0 0 1 8 0v2.7"/></svg></span>
             <input type="password" name="password_confirm" id="reg-password-confirm" placeholder="Repita a senha" autocomplete="new-password" required data-validate="confirm">
+            <button type="button" class="field-toggle" data-toggle-password aria-controls="reg-password-confirm" aria-pressed="false" aria-label="mostrar senha">mostrar</button>
         </span>
         <small class="<?= $descreve('password_confirm') ?>"><?= $errors['password_confirm'] ?? '' ?></small>
     </label>

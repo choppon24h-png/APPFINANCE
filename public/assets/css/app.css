@@ -769,10 +769,14 @@ body.auth-body {
 .auth-field input { padding-left: 36px; }
 .auth-field .field-toggle {
     position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
-    padding: 5px 8px; border: 0; border-radius: 6px;
+    padding: 6px 9px; border: 0; border-radius: 6px;
     background: transparent; color: var(--muted); font-size: 10.5px; font-weight: 700;
+    letter-spacing: .04em; text-transform: uppercase; cursor: pointer; z-index: 2;
 }
-.auth-field .field-toggle:hover { color: var(--text); background: var(--surface-3); }
+.auth-field .field-toggle:hover,
+.auth-field .field-toggle:focus-visible { color: var(--text); background: var(--surface-3); outline: none; }
+.auth-field .field-toggle.is-visible { color: var(--brand-blue-2); }
+.auth-field input { padding-right: 76px; }
 .auth-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: -2px; }
 .auth-check { display: inline-flex; align-items: center; gap: 7px; color: var(--muted-2); font-size: 11.5px; cursor: pointer; }
 .auth-check input { width: 15px; height: 15px; accent-color: var(--brand-blue); }
