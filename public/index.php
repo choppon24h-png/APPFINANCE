@@ -14,7 +14,12 @@ use App\Middlewares\TenantMiddleware;
 $uriAtual = strtok($_SERVER['REQUEST_URI'], '?');
 
 // Rotas que nao precisam de autenticacao
-$rotasPublicas = ['/login', '/logout'];
+$rotasPublicas = [
+    '/login', '/logout', '/cadastro', '/cadastro/completar',
+    '/termos', '/privacidade',
+    '/auth/google', '/auth/google/callback',
+    '/auth/microsoft', '/auth/microsoft/callback',
+];
 
 $ehPublica = false;
 foreach ($rotasPublicas as $pub) {
@@ -30,7 +35,7 @@ require_once BASE_PATH . '/routes/web.php';
 // Multi-tenant (opcional): carrega o TenantContext a partir da sessao
 // antes do controller ser chamado. Se o projeto for single-tenant,
 // remova este bloco e o TenantMiddleware.
-if (!$ehPublica && $uriAtual !== '/selecionar-empresa' && Auth::check()) {
+if (!$ehPublica && $uriAtual !== '/selecionar-empresa' && $uriAtual !== '/cadastro/completar' && Auth::check()) {
     (new TenantMiddleware())->handle();
 }
 

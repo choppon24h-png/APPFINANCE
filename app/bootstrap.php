@@ -80,6 +80,36 @@ if (!function_exists('loadEnv')) {
 // Carrega variaveis de ambiente
 loadEnv(BASE_PATH . '/.env');
 
+// ─── CONFIGURACAO PENDENTE ───────────────────────────────────────────────────
+// Sem .env nao ha banco: em vez de um 500 generico, mostramos uma pagina 503
+// amigavel explicando exatamente o que fazer (caso classico na HostGator).
+if (!file_exists(BASE_PATH . '/.env')) {
+    \App\Core\ErrorPage::missingEnv();
+}
+
+// ─── ERROS NAO TRATADOS ──────────────────────────────────────────────────────
+set_exception_handler(static function (\Throwable $e): void {
+    \App\Core\Logger::error('Excecao nao tratada', [
+        'message' => $e->getMessage(),
+        'file'    => $e->getFile() . ':' . $e->getLine(),
+    ]);
+
+    if ($e instanceof \App\Core\DatabaseException) {
+        \App\Core\ErrorPage::unavailable('Não foi possível falar com o banco de dados agora. Tente novamente em alguns instantes.');
+    }
+
+    \App\Core\ErrorPage::serverError($e);
+});
+
+register_shutdown_function(static function (): void {
+    $error = error_get_last();
+    if (!$error || !in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR], true)) {
+        return;
+    }
+    \App\Core\Logger::error('Erro fatal', $error);
+    \App\Core\ErrorPage::serverError(new \ErrorException($error['message'], 0, $error['type'], $error['file'], $error['line']));
+});
+
 // Configura timezone
 date_default_timezone_set($_ENV['APP_TIMEZONE'] ?? 'America/Sao_Paulo');
 

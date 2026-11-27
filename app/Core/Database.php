@@ -27,7 +27,7 @@ class Database {
                 self::$instance = new PDO($dsn, $user, $pass, $options);
             } catch (PDOException $e) {
                 Logger::error('Falha na conexao com o banco de dados', ['message' => $e->getMessage()]);
-                throw new \RuntimeException('Erro de conexao com o banco de dados.', 500);
+                throw new DatabaseException('Erro de conexao com o banco de dados.', 503, $e);
             }
         }
 

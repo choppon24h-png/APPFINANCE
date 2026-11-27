@@ -69,7 +69,14 @@ class Router {
 
     private static function isPublicRoute(string $uri): bool {
         foreach (self::$publicRoutes as $pub) {
-            if ($uri === $pub || strpos($uri, $pub) === 0) {
+            // Terminado em "*" => prefixo; caso contrario, correspondencia exata
+            if (substr($pub, -1) === '*') {
+                if (strpos($uri, rtrim($pub, '*')) === 0) {
+                    return true;
+                }
+                continue;
+            }
+            if ($uri === $pub) {
                 return true;
             }
         }
@@ -107,9 +114,8 @@ class Router {
                     $class = "App\\Controllers\\{$controllerName}";
 
                     if (!class_exists($class)) {
-                        http_response_code(500);
                         Logger::error("Controller nao encontrado: {$class}");
-                        echo "<h1>Erro 500</h1><p>Controller <code>{$class}</code> nao encontrado.</p>";
+                        ErrorPage::render(500, 'Erro interno', 'A página solicitada não pôde ser carregada.');
                         return;
                     }
 
@@ -122,26 +128,21 @@ class Router {
             }
         }
 
-        http_response_code(404);
-        echo '<h1>404 - Pagina nao encontrada</h1>';
+        ErrorPage::notFound();
     }
 
     private static function handleError(\Throwable $e): void {
-        http_response_code(500);
         Logger::error('Erro nao tratado na rota', [
             'exception' => $e->getMessage(),
             'file'      => $e->getFile(),
             'line'      => $e->getLine(),
         ]);
 
-        if (($_ENV['APP_DEBUG'] ?? 'false') === 'true') {
-            echo "<h1>Erro 500</h1>";
-            echo "<p><strong>Mensagem:</strong> " . htmlspecialchars($e->getMessage()) . "</p>";
-            echo "<p><strong>Arquivo:</strong> " . htmlspecialchars($e->getFile()) . " na linha " . $e->getLine() . "</p>";
-            echo "<pre>" . htmlspecialchars($e->getTraceAsString()) . "</pre>";
-        } else {
-            echo "<h1>Erro 500 - Erro Interno do Servidor</h1>";
-            echo "<p>Ocorreu um erro ao processar sua requisicao. Tente novamente mais tarde.</p>";
+        // Banco fora do ar => 503 (servico indisponivel), nao 500
+        if ($e instanceof DatabaseException || $e->getPrevious() instanceof \PDOException) {
+            ErrorPage::unavailable('Não foi possível falar com o banco de dados agora. Tente novamente em alguns instantes.');
         }
+
+        ErrorPage::serverError($e);
     }
 }

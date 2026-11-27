@@ -72,8 +72,15 @@ function executarArquivoSql(PDO $pdo, string $path): array
             $pdo->exec($stmt);
             $ok++;
         } catch (Throwable $e) {
+            // Reaplicar migrations gera erros benignos de "ja existe".
+            // Eles nao indicam falha: o banco ja esta atualizado.
+            $msg = $e->getMessage();
+            if (preg_match('/duplicate column|duplicate key name|already exists|Duplicate entry/i', $msg)) {
+                $ok++;
+                continue;
+            }
             $resumo = strlen($stmt) > 110 ? substr($stmt, 0, 110) . '...' : $stmt;
-            $erros[] = $e->getMessage() . ' :: ' . $resumo;
+            $erros[] = $msg . ' :: ' . $resumo;
         }
     }
 
