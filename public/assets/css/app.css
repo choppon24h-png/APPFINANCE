@@ -965,6 +965,8 @@ body.auth-body {
     .data-table td:first-child { padding-top: 0; }
     .data-table .transaction-name { justify-content: flex-end; text-align: right; }
     .data-table .transaction-name small { text-align: right; }
+    .data-table .admin-user { justify-content: flex-end; text-align: right; }
+    .data-table .admin-user strong, .data-table .admin-user small { text-align: right; }
     .data-table .row-actions { justify-content: flex-end; padding-top: 8px; }
     .data-table td[data-label="Valor"] { font-size: 13px; font-weight: 800; }
     .form-grid { grid-template-columns: 1fr; gap: 13px; }
