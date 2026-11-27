@@ -76,6 +76,16 @@ As credenciais da produção não são armazenadas no GitHub. Para instalação,
 
 O sistema utiliza `password_hash`, `password_verify`, prepared statements com emulação desativada, escape de saída HTML, token CSRF em formulários de escrita, cookies de sessão `HttpOnly`/`SameSite`, headers básicos de segurança, auditoria e autorização por usuário. Toda query financeira deverá filtrar pelo usuário autenticado e toda operação de escrita relevante deverá registrar auditoria.
 
+## Acesso: login, cadastro e painel administrativo
+
+O login aceita e-mail/senha e, opcionalmente, Google e Microsoft. O bloqueio por tentativas usa `LOGIN_MAX_ATTEMPTS`/`LOGIN_LOCK_MINUTES`, a sessão é regenerada no login e contas inativas são recusadas com aviso. Não há envio de e-mails: a recuperação de senha orienta falar com o administrador, e a senha temporária gerada no painel é exibida uma única vez.
+
+O cadastro valida nome completo, e-mail único, data de nascimento real (idade mínima em `REGISTRATION_MIN_AGE`), senha forte, confirmação e aceite dos termos, com honeypot e limite de `REGISTRATION_MAX_PER_HOUR` cadastros por IP. Os textos de `/termos` e `/privacidade` são modelos marcados como rascunho e precisam de revisão jurídica antes da publicação.
+
+O painel em `/admin` exige superadministrador ou a permissão `access_admin_panel` e oferece visão geral, busca e filtros de usuários, exportação CSV, edição de nome/perfil/status, ativação/desativação, redefinição de senha e auditoria. A rota antiga `/usuarios` redireciona para `/admin/usuarios`.
+
+Para habilitar os botões sociais, siga [`docs/OAUTH_SETUP.md`](./docs/OAUTH_SETUP.md) e preencha `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` e `MICROSOFT_CLIENT_ID`/`MICROSOFT_CLIENT_SECRET`/`MICROSOFT_TENANT` no `.env`. Sem essas credenciais os botões simplesmente não aparecem.
+
 ## Desenvolvimento local
 
 1. Copie `.env.example` para `.env` e configure um banco MySQL/MariaDB local.
