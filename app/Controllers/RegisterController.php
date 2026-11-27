@@ -6,6 +6,7 @@ use App\Core\Auth;
 use App\Core\Controller;
 use App\Core\Database;
 use App\Core\Flash;
+use App\Core\Schema;
 use App\Services\AuthAttemptService;
 
 class RegisterController extends Controller
@@ -37,6 +38,17 @@ class RegisterController extends Controller
     {
         if (!$this->registrationOpen()) {
             $this->redirect('/login');
+        }
+
+        // Banco sem a migration 0004: mensagem clara em vez de erro 500
+        if (!Schema::accessReady()) {
+            \App\Core\Logger::error('Cadastro bloqueado: schema de acesso incompleto', [
+                'faltando' => Schema::missingAccess(),
+            ]);
+            $this->renderForm([], [
+                'form' => 'O cadastro está temporariamente indisponível porque o banco de dados precisa ser atualizado. Fale com o administrador.',
+            ]);
+            return;
         }
 
         $old = [

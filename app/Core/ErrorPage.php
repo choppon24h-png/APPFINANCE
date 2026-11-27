@@ -13,7 +13,7 @@ class ErrorPage
     /**
      * Renderiza a pagina e encerra a requisicao.
      */
-    public static function render(int $status, string $title, string $message, string $hint = '', array $debug = []): void
+    public static function render(int $status, string $title, string $message, string $hint = '', array $debug = [], array $actions = []): void
     {
         if (!headers_sent()) {
             http_response_code($status);
@@ -29,6 +29,14 @@ class ErrorPage
 
         if ($debug && ($_ENV['APP_DEBUG'] ?? 'false') === 'true') {
             $debugHtml = '<pre class="err-debug">' . htmlspecialchars(print_r($debug, true), ENT_QUOTES, 'UTF-8') . '</pre>';
+        }
+
+        $actions = $actions ?: ['Ir para o login' => '/login', 'Abrir o sistema' => '/dashboard'];
+        $actionsHtml = '';
+        foreach ($actions as $rotulo => $url) {
+            $classe = $actionsHtml === '' ? 'button' : 'button ghost';
+            $actionsHtml .= '<a class="' . $classe . '" href="' . htmlspecialchars($url, ENT_QUOTES, 'UTF-8') . '">'
+                . htmlspecialchars($rotulo, ENT_QUOTES, 'UTF-8') . '</a>';
         }
 
         echo <<<HTML
@@ -82,8 +90,7 @@ class ErrorPage
         {$hint}
         {$debugHtml}
         <div class="actions">
-            <a class="button" href="/login">Ir para o login</a>
-            <a class="button ghost" href="/dashboard">Abrir o sistema</a>
+            {$actionsHtml}
         </div>
         <footer>© {$ano} SOMASE · Controle Financeiro</footer>
     </main>
@@ -115,6 +122,23 @@ HTML;
             'Configuração pendente',
             'O arquivo .env não foi encontrado na raiz do projeto, então o sistema ainda não consegue conectar ao banco de dados.',
             'Envie o arquivo .env (copiado de .env.example) para a mesma pasta de app/, public/ e .htaccess, com DB_* e APP_SECRET preenchidos. Depois recarregue esta página.'
+        );
+    }
+
+    /**
+     * Codigo novo + banco antigo: explica o que fazer em vez de 500.
+     */
+    public static function outdatedSchema(string $faltando = ''): void
+    {
+        $detalhe = $faltando !== '' ? ' Pendências: ' . $faltando . '.' : '';
+
+        self::render(
+            503,
+            'Banco de dados precisa ser atualizado',
+            'O sistema já está na versão nova, mas o banco ainda não recebeu a atualização da etapa de acesso.' . $detalhe,
+            'Abra /_atualizar.php neste domínio (logado como administrador) e clique em “Aplicar atualização do banco”. O procedimento é seguro e pode ser repetido quantas vezes precisar.',
+            [],
+            ['Abrir atualizador' => '/_atualizar.php', 'Ir para o login' => '/login']
         );
     }
 

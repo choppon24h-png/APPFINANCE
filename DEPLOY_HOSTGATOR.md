@@ -86,6 +86,23 @@ Acesse `https://seu-dominio.com.br/_diagnostico.php?key=SEU_APP_SECRET` para
 ver versão do PHP, extensões, permissões de pasta e conexão com o banco numa
 única tela. **Apague `public/_diagnostico.php` do servidor depois de usar.**
 
+Para conferir o esquema e aplicar a atualização da etapa de acesso
+(migration `0004_user_registration.sql`), abra `/_atualizar.php`:
+
+- se você já estiver logado como administrador, a página abre direto;
+- caso contrário, informe o `APP_SECRET` do `.env` no formulário.
+
+Ela lista o que falta (tabelas `user_identities`/`auth_attempts`, colunas
+`birth_date`, `auth_provider`, `avatar_url`, `email_verified_at`,
+`terms_accepted_at`, `registration_ip` e a permissão `access_admin_panel`),
+mostra os últimos erros do log e tem o botão **Aplicar atualização do banco**.
+O comando é idempotente: pode repetir sem risco. **Apague `public/_atualizar.php`
+depois de usar.**
+
+> Sempre que enviar uma versão nova do código, rode essa página uma vez.
+> Se o código estiver na frente do banco, o sistema mostra a tela
+> "Banco de dados precisa ser atualizado" em vez de erro 500.
+
 ## 8. Acesse o sistema
 
 Vá em `https://seu-dominio.com.br/login`.

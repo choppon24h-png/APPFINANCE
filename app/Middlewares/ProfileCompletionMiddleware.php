@@ -3,6 +3,7 @@ namespace App\Middlewares;
 
 use App\Core\Auth;
 use App\Core\Middleware;
+use App\Core\Schema;
 
 /**
  * Usuarios criados por Google/Microsoft so entram no sistema depois de
@@ -21,6 +22,12 @@ class ProfileCompletionMiddleware extends Middleware
     public function handle(): void
     {
         if (!Auth::check()) {
+            return;
+        }
+
+        // Banco sem a 0004: deixa o AdminMiddleware/Controller explicar o que
+        // falta em vez de mandar o administrador para "completar cadastro".
+        if (!Schema::accessReady()) {
             return;
         }
 

@@ -181,6 +181,12 @@ foreach ($linhas as $grupo) {
         <?php endforeach; ?>
     </div>
 
+    <p style="margin:14px 0 0;font-size:13px;color:#9db6d8">
+        Precisa aplicar a atualizacao do banco (migration 0004)?
+        <a href="/_atualizar.php" style="color:#5aa2ff;font-weight:700">Abrir o atualizador</a>
+        (pede APP_SECRET ou aproveita a sessao de administrador).
+    </p>
+
     <?php foreach ($linhas as $grupo => $itens): ?>
         <div class="grupo">
             <h2><?= htmlspecialchars($grupo) ?></h2>

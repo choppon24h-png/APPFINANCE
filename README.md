@@ -84,7 +84,9 @@ O cadastro valida nome completo, e-mail único, data de nascimento real (idade m
 
 O painel em `/admin` exige superadministrador ou a permissão `access_admin_panel` e oferece visão geral, busca e filtros de usuários, exportação CSV, edição de nome/perfil/status, ativação/desativação, redefinição de senha e auditoria. A rota antiga `/usuarios` redireciona para `/admin/usuarios`.
 
-Para habilitar os botões sociais, siga [`docs/OAUTH_SETUP.md`](./docs/OAUTH_SETUP.md) e preencha `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` e `MICROSOFT_CLIENT_ID`/`MICROSOFT_CLIENT_SECRET`/`MICROSOFT_TENANT` no `.env`. Sem essas credenciais os botões simplesmente não aparecem.
+Os botões Google e Microsoft ficam sempre visíveis. Enquanto as credenciais não forem preenchidas, eles aparecem com o selo **"em ativação"** e o clique volta ao login explicando o que falta. Para ativar, siga [`docs/OAUTH_SETUP.md`](./docs/OAUTH_SETUP.md) e preencha `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` e `MICROSOFT_CLIENT_ID`/`MICROSOFT_CLIENT_SECRET`/`MICROSOFT_TENANT` no `.env`.
+
+Se o código for atualizado antes do banco, o sistema mostra a página "Banco de dados precisa ser atualizado" (503) em vez de erro 500. Abra `/_atualizar.php` (logado como administrador ou com o `APP_SECRET`) para aplicar a migration pendente, ver o estado do ambiente e os últimos erros do log.
 
 ## Desenvolvimento local
 
