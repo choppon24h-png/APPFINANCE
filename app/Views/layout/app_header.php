@@ -10,7 +10,7 @@ $menu = [
     ['/lancamentos/novo', 'Novo lançamento', 'plus'],
     ['/lancamentos', 'Lançamentos', 'list'],
     ['/contas', 'Contas', 'wallet'],
-    ['/investimentos', 'Investimentos', 'chart'],
+    ['/investimentos', 'Investimentos', 'trend'],
     ['/categorias', 'Categorias', 'tag'],
     ['/centros-custo', 'Centros de custo', 'layers'],
     ['/relatorios', 'Relatórios', 'chart'],

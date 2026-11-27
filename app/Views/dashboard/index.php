@@ -275,6 +275,10 @@ $chartAria = 'Gráfico de receitas e despesas dos últimos ' . (int) $period . '
                     </a>
                 <?php endforeach; ?>
             </div>
+            <div class="source-total">
+                <span>Total recebido no período</span>
+                <strong class="positive"><?= $money($income) ?></strong>
+            </div>
         <?php endif; ?>
     </section>
 
