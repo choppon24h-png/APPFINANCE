@@ -58,10 +58,33 @@ Acesse `https://seu-dominio.com.br/_instalar.php?key=SEU_APP_SECRET`
 
 **Opção B — via phpMyAdmin:**
 
+**Opção B — um único arquivo SQL (mais rápido):**
+
 1. cPanel > **phpMyAdmin**, selecione o banco criado.
-2. Aba **Importar** > selecione `database/migrations/0001_core_schema.sql` > Executar.
-    3. Importe `database/migrations/0002_cnpj_lookup.sql` e `database/migrations/0003_finance_schema.sql`, nessa ordem.
-    4. Importe `database/seeds/0001_admin_seed.sql` e `database/seeds/0002_finance_seed.sql`.
+2. Aba **Importar** > escolha `database/sql/somase_instalacao_completa.sql` > **Executar**.
+
+Esse arquivo cria as 20 tabelas (incluindo a `0004`, de cadastro e login
+social), carrega perfis, permissões, categorias e centros de custo padrão, e
+termina com consultas de verificação. O usuário inicial é
+`admin@example.com` / `Admin@123` — troque a senha no primeiro acesso.
+**Ele apaga as tabelas existentes**, então use apenas em banco novo.
+
+**Opção C — banco que já tem dados (produção):**
+
+Importe `database/sql/somase_atualizar_banco.sql`. O script não apaga nada:
+consulta o `information_schema` e só cria o que falta (colunas novas em
+`users`, tabelas `user_identities` e `auth_attempts`, permissão
+`access_admin_panel`). Pode ser executado quantas vezes quiser e funciona em
+MySQL 5.7+/8 e MariaDB 10.3+, sem precisar de privilégio para criar
+procedimentos.
+
+**Opção D — migrations uma a uma (manual):**
+
+1. `database/migrations/0001_core_schema.sql`
+2. `database/migrations/0002_cnpj_lookup.sql`
+3. `database/migrations/0003_finance_schema.sql`
+4. `database/migrations/0004_user_registration.sql`
+5. `database/seeds/0001_admin_seed.sql` e `database/seeds/0002_finance_seed.sql`
 
 ## 5. Permissões de pastas
 
