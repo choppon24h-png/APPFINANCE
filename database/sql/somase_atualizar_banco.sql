@@ -184,8 +184,6 @@ SET @sql := (SELECT IF(COUNT(*) = 0,
     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'accounts' AND INDEX_NAME = 'idx_accounts_bank');
 PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 INSERT INTO `banks` (`compe`, `ispb`, `name`, `full_name`, `aliases`, `logo_url`) VALUES
-('000', '28719664', 'Balcão B3', 'Sistema do Balcão B3', NULL, NULL),
-('000', '54641030', 'Câmara B3', 'Câmara B3', NULL, NULL),
 ('000', '60934221', 'Câmbio B3', 'Câmara de Câmbio B3', NULL, NULL),
 ('001', '00000000', 'BCO DO BRASIL S.A.', 'Banco do Brasil S.A.', 'Banco do Brasil | BB', 'https://cdn.jsdelivr.net/npm/logos-bancos-br@0/logos/svg/00000000.svg'),
 ('003', '04902979', 'BCO DA AMAZONIA S.A.', 'BANCO DA AMAZONIA S.A.', 'Banco da Amazônia | BASA', 'https://cdn.jsdelivr.net/npm/logos-bancos-br@0/logos/svg/04902979.svg'),
@@ -283,11 +281,11 @@ INSERT INTO `banks` (`compe`, `ispb`, `name`, `full_name`, `aliases`, `logo_url`
 ('195', '07799277', 'VALOR S/A SCFI', 'VALOR S/A SOCIEDADE DE CRÉDITO, FINANCIAMENTO E INVESTIMENTO', NULL, NULL),
 ('196', '32648370', 'FAIR SOCIEDADE CC', 'FAIR SOCIEDADE CORRETORA DE CÂMBIO S.A.', NULL, NULL),
 ('197', '16501555', 'STONE IP S.A.', 'STONE INSTITUIÇÃO DE PAGAMENTO S.A.', 'Stone | Stone Pagamentos', 'https://cdn.jsdelivr.net/npm/logos-bancos-br@0/logos/svg/16501555.svg'),
-('208', '30306294', 'BANCO BTG PACTUAL S.A.', 'Banco BTG Pactual S.A.', 'BTG | BTG Pactual', 'https://cdn.jsdelivr.net/npm/logos-bancos-br@0/logos/svg/30306294.svg')
+('208', '30306294', 'BANCO BTG PACTUAL S.A.', 'Banco BTG Pactual S.A.', 'BTG | BTG Pactual', 'https://cdn.jsdelivr.net/npm/logos-bancos-br@0/logos/svg/30306294.svg'),
+('212', '92894922', 'BANCO ORIGINAL', 'Banco Original S.A.', 'Original | Banco Original', NULL),
+('213', '54403563', 'BCO ARBI S.A.', 'Banco Arbi S.A.', NULL, 'https://cdn.jsdelivr.net/npm/logos-bancos-br@0/logos/svg/54403563.svg')
 ON DUPLICATE KEY UPDATE `name` = VALUES(`name`), `full_name` = VALUES(`full_name`), `aliases` = VALUES(`aliases`), `logo_url` = VALUES(`logo_url`), `active` = 1;
 INSERT INTO `banks` (`compe`, `ispb`, `name`, `full_name`, `aliases`, `logo_url`) VALUES
-('212', '92894922', 'BANCO ORIGINAL', 'Banco Original S.A.', 'Original | Banco Original', NULL),
-('213', '54403563', 'BCO ARBI S.A.', 'Banco Arbi S.A.', NULL, 'https://cdn.jsdelivr.net/npm/logos-bancos-br@0/logos/svg/54403563.svg'),
 ('217', '91884981', 'BANCO JOHN DEERE S.A.', 'Banco John Deere S.A.', NULL, NULL),
 ('218', '71027866', 'BCO BS2 S.A.', 'Banco BS2 S.A.', NULL, 'https://cdn.jsdelivr.net/npm/logos-bancos-br@0/logos/png/71027866.png'),
 ('222', '75647891', 'BCO CRÉDIT AGRICOLE BR S.A.', 'BANCO CRÉDIT AGRICOLE BRASIL S.A.', NULL, NULL),
@@ -385,11 +383,11 @@ INSERT INTO `banks` (`compe`, `ispb`, `name`, `full_name`, `aliases`, `logo_url`
 ('399', '01701201', 'Kirton Bank', 'Kirton Bank S.A. - Banco Múltiplo', NULL, NULL),
 ('400', '05491616', 'COOP CREDITAG - EM LIQUIDAÇÃO EXTRAJUDICIAL', 'COOPERATIVA DE CRÉDITO, POUPANÇA E SERVIÇOS FINANCEIROS - EM LIQUIDAÇÃO EXTRAJUDICIAL', NULL, NULL),
 ('401', '15111975', 'IUGU IP S.A.', 'IUGU INSTITUIÇÃO DE PAGAMENTO S.A.', NULL, 'https://cdn.jsdelivr.net/npm/logos-bancos-br@0/logos/svg/15111975.svg'),
-('402', '36947229', 'COBUCCIO S.A. SCFI', 'COBUCCIO S/A - SOCIEDADE DE CRÉDITO, FINANCIAMENTO E INVESTIMENTOS', NULL, NULL)
+('402', '36947229', 'COBUCCIO S.A. SCFI', 'COBUCCIO S/A - SOCIEDADE DE CRÉDITO, FINANCIAMENTO E INVESTIMENTOS', NULL, NULL),
+('403', '37880206', 'CORA SCFI', 'CORA SOCIEDADE DE CRÉDITO, FINANCIAMENTO E INVESTIMENTO S.A.', 'Cora', 'https://cdn.jsdelivr.net/npm/logos-bancos-br@0/logos/svg/37880206.svg'),
+('404', '37241230', 'SUMUP SCFI S.A', 'SUMUP SOCIEDADE DE CRÉDITO, FINANCIAMENTO E INVESTIMENTO S.A.', 'SumUp', 'https://cdn.jsdelivr.net/npm/logos-bancos-br@0/logos/svg/37241230.svg')
 ON DUPLICATE KEY UPDATE `name` = VALUES(`name`), `full_name` = VALUES(`full_name`), `aliases` = VALUES(`aliases`), `logo_url` = VALUES(`logo_url`), `active` = 1;
 INSERT INTO `banks` (`compe`, `ispb`, `name`, `full_name`, `aliases`, `logo_url`) VALUES
-('403', '37880206', 'CORA SCFI', 'CORA SOCIEDADE DE CRÉDITO, FINANCIAMENTO E INVESTIMENTO S.A.', 'Cora', 'https://cdn.jsdelivr.net/npm/logos-bancos-br@0/logos/svg/37880206.svg'),
-('404', '37241230', 'SUMUP SCFI S.A', 'SUMUP SOCIEDADE DE CRÉDITO, FINANCIAMENTO E INVESTIMENTO S.A.', 'SumUp', 'https://cdn.jsdelivr.net/npm/logos-bancos-br@0/logos/svg/37241230.svg'),
 ('406', '37715993', 'ACCREDITO SCD S.A.', 'ACCREDITO - SOCIEDADE DE CRÉDITO DIRETO S.A.', NULL, 'https://cdn.jsdelivr.net/npm/logos-bancos-br@0/logos/svg/37715993.svg'),
 ('407', '00329598', 'SEFER INVESTIMENTOS DTVM LTDA - EM LIQUIDAÇÃO EXTRAJUDICIAL', 'SEFER INVESTIMENTOS DISTRIBUIDORA DE TÍTULOS E VALORES MOBILIÁRIOS LTDA - EM LIQUIDAÇÃO EXTRAJUDICIAL', NULL, 'https://cdn.jsdelivr.net/npm/logos-bancos-br@0/logos/svg/00329598.svg'),
 ('408', '36586946', 'BONUSPAGO SCD S.A.', 'BONUSPAGO SOCIEDADE DE CRÉDITO DIRETO S.A.', NULL, NULL),
@@ -487,11 +485,11 @@ INSERT INTO `banks` (`compe`, `ispb`, `name`, `full_name`, `aliases`, `logo_url`
 ('540', '04849745', 'HBI SCD', 'HBI SOCIEDADE DE CRÉDITO DIRETO S/A.', NULL, NULL),
 ('541', '00954288', 'FDO GARANTIDOR CRÉDITOS', 'FUNDO GARANTIDOR DE CREDITOS - FGC', NULL, 'https://cdn.jsdelivr.net/npm/logos-bancos-br@0/logos/svg/00954288.svg'),
 ('542', '18189547', 'CLOUDWALK IP LTDA', 'CLOUDWALK INSTITUIÇÃO DE PAGAMENTO E SERVICOS LTDA', NULL, 'https://cdn.jsdelivr.net/npm/logos-bancos-br@0/logos/svg/18189547.svg'),
-('543', '92825397', 'COOPCRECE', 'COOPERATIVA DE ECONOMIA E CRÉDITO MÚTUO DOS ELETRICITÁRIOS E DOS TRABALHADORES DAS EMPRESAS DO SETOR DE ENERGIA - COOPCRECE', NULL, NULL)
+('543', '92825397', 'COOPCRECE', 'COOPERATIVA DE ECONOMIA E CRÉDITO MÚTUO DOS ELETRICITÁRIOS E DOS TRABALHADORES DAS EMPRESAS DO SETOR DE ENERGIA - COOPCRECE', NULL, NULL),
+('544', '38593706', 'MULTICRED SCD S.A.', 'MULTICRED SOCIEDADE DE CRÉDITO DIRETO S.A.', NULL, NULL),
+('546', '30980539', 'OKTO IP', 'OKTO INSTITUIÇÃO DE PAGAMENTO S.A.', 'Okto', NULL)
 ON DUPLICATE KEY UPDATE `name` = VALUES(`name`), `full_name` = VALUES(`full_name`), `aliases` = VALUES(`aliases`), `logo_url` = VALUES(`logo_url`), `active` = 1;
 INSERT INTO `banks` (`compe`, `ispb`, `name`, `full_name`, `aliases`, `logo_url`) VALUES
-('544', '38593706', 'MULTICRED SCD S.A.', 'MULTICRED SOCIEDADE DE CRÉDITO DIRETO S.A.', NULL, NULL),
-('546', '30980539', 'OKTO IP', 'OKTO INSTITUIÇÃO DE PAGAMENTO S.A.', 'Okto', NULL),
 ('547', '45331622', 'BNK DIGITAL SCD S.A.', 'BNK DIGITAL SOCIEDADE DE CRÉDITO DIRETO S.A.', NULL, NULL),
 ('548', '06249129', 'RPW S.A. SCFI', 'RPW S/A SOCIEDADE DE CRÉDITO, FINANCIAMENTO E INVESTIMENTO', NULL, NULL),
 ('550', '32074986', 'BEETELLER IP LTDA.', 'BEETELLER INSTITUIÇÃO DE PAGAMENTO LTDA.', NULL, NULL),
@@ -589,11 +587,11 @@ INSERT INTO `banks` (`compe`, `ispb`, `name`, `full_name`, `aliases`, `logo_url`
 ('688', '43978697', 'KIKAI SCD S.A.', 'KIKAI SOCIEDADE DE CRÉDITO DIRETO S.A.', NULL, NULL),
 ('690', '16814330', 'BK IP S.A.', 'BK INSTITUIÇÃO DE PAGAMENTO S.A.', NULL, NULL),
 ('692', '56198117', 'ZYDI', 'ZYDI SOCIEDADE DE CRÉDITO DIRETO S.A.', NULL, NULL),
-('693', '32820711', 'EFEX IP', 'EFEX INSTITUIÇÃO DE PAGAMENTO S.A.', NULL, NULL)
+('693', '32820711', 'EFEX IP', 'EFEX INSTITUIÇÃO DE PAGAMENTO S.A.', NULL, NULL),
+('694', '54811417', 'WOOVI IP LTDA.', 'WOOVI INSTITUICAO DE PAGAMENTO LTDA', NULL, 'https://cdn.jsdelivr.net/npm/logos-bancos-br@0/logos/png/54811417.png'),
+('695', '35523352', 'BEES IP LTDA.', 'BEES INSTITUICAO DE PAGAMENTO LTDA.', NULL, NULL)
 ON DUPLICATE KEY UPDATE `name` = VALUES(`name`), `full_name` = VALUES(`full_name`), `aliases` = VALUES(`aliases`), `logo_url` = VALUES(`logo_url`), `active` = 1;
 INSERT INTO `banks` (`compe`, `ispb`, `name`, `full_name`, `aliases`, `logo_url`) VALUES
-('694', '54811417', 'WOOVI IP LTDA.', 'WOOVI INSTITUICAO DE PAGAMENTO LTDA', NULL, 'https://cdn.jsdelivr.net/npm/logos-bancos-br@0/logos/png/54811417.png'),
-('695', '35523352', 'BEES IP LTDA.', 'BEES INSTITUICAO DE PAGAMENTO LTDA.', NULL, NULL),
 ('696', '50032584', 'LOAN BRASIL SCD S.A.', 'LOAN BRASIL SOCIEDADE DE CRÉDITO DIRETO S.A.', NULL, NULL),
 ('697', '45056494', 'JM CORRETORA DE CÂMBIO', 'JM CORRETORA DE CÂMBIO LTDA.', NULL, NULL),
 ('698', '58367961', 'BIT SCD S.A.', 'BIT SOCIEDADE DE CRÉDITO DIRETO S.A.', NULL, NULL),

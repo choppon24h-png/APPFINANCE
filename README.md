@@ -2,6 +2,8 @@
 
 Sistema financeiro pessoal e empresarial simples, responsivo e mobile-first, construído em PHP 8.x, MySQL/MariaDB, HTML5, CSS3 e JavaScript, com foco em hospedagem compartilhada Apache/HostGator. A aplicação mantém o framework MVC próprio herdado do projeto-base e evolui sua estrutura sem dependências que exijam Node.js ou processos permanentes no servidor.
 
+> **Banco de dados — regra obrigatória:** o projeto mantém duas versões do SQL. Toda alteração em `database/migrations/*.sql` ou `database/seeds/*.sql` (MySQL, usado em produção) deve ser replicada em `database/postgresql/` **no mesmo commit**, rodando `python3 tools/build_postgres_sql.py && python3 tools/build_postgres_sql.py --validar && python3 tools/check_sql_parity.py`. O verificador falha quando a pasta PostgreSQL fica atrasada. Detalhes em [database/postgresql/README.md](database/postgresql/README.md).
+
 > **Estado da configuração de produção:** o projeto não está conectado ao banco de produção. As credenciais reais da HostGator deverão ser informadas somente após a validação da estrutura, das migrations e dos testes locais.
 
 ## Diagnóstico técnico inicial

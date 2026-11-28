@@ -154,6 +154,14 @@ def main() -> None:
     # apenas instituicoes com codigo COMPE (as demais nao aparecem em boletos)
     com_codigo = [b for b in bancos if b.get("code") is not None]
     com_codigo.sort(key=lambda b: (int(b["code"]), b.get("name") or ""))
+    # o BCB tem instituicoes diferentes com o mesmo codigo COMPE; o MySQL
+    # aceita (a ultima vence), o PostgreSQL nao aceita na mesma instrucao.
+    # Mantemos a ultima ocorrencia de cada codigo.
+    unicos: dict[str, dict] = {}
+    for banco in com_codigo:
+        unicos[f"{int(banco['code']):03d}"] = banco
+    com_codigo = [unicos[codigo] for codigo in sorted(unicos)]
+    com_codigo.sort(key=lambda b: int(b["code"]))
 
     linhas = []
     for b in com_codigo:
