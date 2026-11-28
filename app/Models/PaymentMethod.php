@@ -2,10 +2,15 @@
 namespace App\Models;
 
 use App\Core\Model;
+use App\Core\Logger;
+use Throwable;
 
 class PaymentMethod extends Model
 {
     protected string $table = 'payment_methods';
+
+    /** Evita repetir o aviso de tabela ausente a cada consulta. */
+    private static bool $avisou = false;
 
     /** Rotulos das formas antigas (antes do catalogo) para nao perder historico. */
     public const LEGACY = [
@@ -44,17 +49,29 @@ class PaymentMethod extends Model
         $sql = 'SELECT * FROM payment_methods WHERE (user_id IS NULL OR user_id = :user_id)';
         if ($activeOnly) $sql .= " AND status = 'active'";
         $sql .= ' ORDER BY sort_order ASC, name ASC';
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute(['user_id' => $userId]);
-        return $stmt->fetchAll();
+        try {
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute(['user_id' => $userId]);
+            return $stmt->fetchAll();
+        } catch (Throwable $e) {
+            // Banco sem a migration 0007: o formulario segue com as formas
+            // antigas em vez de derrubar a pagina inteira.
+            self::avisarAusencia($e);
+            return [];
+        }
     }
 
     public function findForUser(int $id, int $userId): ?object
     {
-        $stmt = $this->pdo->prepare('SELECT * FROM payment_methods WHERE id = :id AND user_id = :user_id LIMIT 1');
-        $stmt->execute(['id' => $id, 'user_id' => $userId]);
-        $method = $stmt->fetch();
-        return $method ?: null;
+        try {
+            $stmt = $this->pdo->prepare('SELECT * FROM payment_methods WHERE id = :id AND user_id = :user_id LIMIT 1');
+            $stmt->execute(['id' => $id, 'user_id' => $userId]);
+            $method = $stmt->fetch();
+            return $method ?: null;
+        } catch (Throwable $e) {
+            self::avisarAusencia($e);
+            return null;
+        }
     }
 
     public function create(int $userId, array $data): int
@@ -94,20 +111,44 @@ class PaymentMethod extends Model
     /** Slugs ja usados pelo usuario (para gerar um slug unico). */
     public function slugsForUser(int $userId): array
     {
-        $stmt = $this->pdo->prepare('SELECT slug FROM payment_methods WHERE user_id = :user_id');
-        $stmt->execute(['user_id' => $userId]);
-        return $stmt->fetchAll(\PDO::FETCH_COLUMN) ?: [];
+        try {
+            $stmt = $this->pdo->prepare('SELECT slug FROM payment_methods WHERE user_id = :user_id');
+            $stmt->execute(['user_id' => $userId]);
+            return $stmt->fetchAll(\PDO::FETCH_COLUMN) ?: [];
+        } catch (Throwable $e) {
+            self::avisarAusencia($e);
+            return [];
+        }
     }
 
     /** A forma existe no catalogo (padrao do sistema ou do usuario) e esta ativa? */
     public function existsForUser(int $userId, string $slug): bool
     {
-        $stmt = $this->pdo->prepare(
-            "SELECT 1 FROM payment_methods
-             WHERE slug = :slug AND (user_id IS NULL OR user_id = :user_id) AND status = 'active' LIMIT 1"
-        );
-        $stmt->execute(['slug' => $slug, 'user_id' => $userId]);
-        return (bool) $stmt->fetchColumn();
+        try {
+            $stmt = $this->pdo->prepare(
+                "SELECT 1 FROM payment_methods
+                 WHERE slug = :slug AND (user_id IS NULL OR user_id = :user_id) AND status = 'active' LIMIT 1"
+            );
+            $stmt->execute(['slug' => $slug, 'user_id' => $userId]);
+            return (bool) $stmt->fetchColumn();
+        } catch (Throwable $e) {
+            self::avisarAusencia($e);
+            return false;
+        }
+    }
+
+    /** Registra uma unica vez que o catalogo ainda nao existe no banco. */
+    private static function avisarAusencia(Throwable $e): void
+    {
+        if (self::$avisou) {
+            return;
+        }
+        self::$avisou = true;
+        Logger::warning('payment_methods.indisponivel', [
+            'motivo' => 'tabela ausente ou inacessivel; usando a lista legada',
+            'erro'   => $e->getMessage(),
+            'sqlstate' => (string) $e->getCode(),
+        ]);
     }
 
     /**

@@ -32,18 +32,23 @@ dados = clean(run(DUMP + ["--no-create-info", "--complete-insert", "--skip-exten
 HEADER_INSTALL = """-- ============================================================
 -- SOMASE — Controle Financeiro
 -- INSTALACAO COMPLETA DO BANCO (MySQL 5.7+ / MySQL 8 / MariaDB 10.3+)
--- Gerado em 2026-11-27 a partir do banco de desenvolvimento ja com as
--- migrations 0004 (cadastro, OAuth, painel) e 0005 (catalogo de bancos).
+-- Gerado a partir do banco de desenvolvimento ja com as migrations
+-- 0004 (cadastro, OAuth, painel), 0005 (bancos), 0006 (documentos e
+-- imoveis) e 0007 (CEP, formas de pagamento e investimentos).
+--
+-- ####################################################################
+-- ##  CUIDADO: ESTE ARQUIVO APAGA TODAS AS TABELAS DO BANCO.         ##
+-- ##  Use SOMENTE em banco novo/vazio.                              ##
+-- ##  Para atualizar um banco que ja tem dados (producao), importe   ##
+-- ##  database/migrations/0007_cep_payments_investments.sql ou       ##
+-- ##  somase_atualizar_banco.sql. NUNCA este arquivo.                ##
+-- ####################################################################
 --
 -- O QUE ESTE ARQUIVO FAZ
---   * cria as 20 tabelas do sistema (financeiro + acesso);
+--   * cria as tabelas do sistema (financeiro + acesso);
 --   * carrega os dados essenciais: perfis, permissoes, categorias e
 --     centros de custo padrao;
 --   * cria o usuario inicial admin@example.com / Admin@123 (superadmin).
---
--- ATENCAO: as tabelas existentes sao APAGADAS (DROP TABLE IF EXISTS).
--- Use em banco novo/vazio. Para atualizar um banco que ja tem dados,
--- importe somase_atualizar_banco.sql.
 --
 -- COMO IMPORTAR (phpMyAdmin)
 --   1. selecione o banco no menu da esquerda;
@@ -245,6 +250,42 @@ atualizacao += """
 -- Idempotente: pode ser executado novamente sem duplicar registros.
 -- ============================================================
 """ + corpo_bancos + "\n"
+
+# ---------- 0006 em diante: migrations idempotentes incluídas na íntegra ----------
+# Cada arquivo usa information_schema + PREPARE/EXECUTE e seeds com
+# "INSERT ... SELECT ... WHERE NOT EXISTS", então pode ser importado em
+# um banco que já tem parte da estrutura sem erro e sem duplicar dados.
+extras = [p for p in sorted((RAIZ / "database" / "migrations").glob("0*.sql"))
+          if p.name >= "0006"]
+for caminho in extras:
+    corpo = "\n".join(
+        linha for linha in caminho.read_text(encoding="utf-8").splitlines()
+        if not linha.lstrip().startswith("--") and linha.strip() not in ("", "SET NAMES utf8mb4;")
+    )
+    atualizacao += (
+        "\n-- ============================================================\n"
+        f"-- {caminho.name} — incluída integralmente (idempotente)\n"
+        "-- ============================================================\n"
+        + corpo + "\n"
+    )
+
+atualizacao += """
+-- ============================================================
+-- VERIFICACAO FINAL — esperado: 1 em cada coluna abaixo
+-- ============================================================
+SELECT
+    (SELECT COUNT(*) FROM information_schema.TABLES
+      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'payment_methods') AS tabela_formas_pagamento,
+    (SELECT COUNT(*) FROM information_schema.TABLES
+      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'investment_types') AS tabela_tipos_investimento,
+    (SELECT COUNT(*) FROM information_schema.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cost_centers'
+        AND COLUMN_NAME = 'zip_code') AS coluna_cep,
+    (SELECT COUNT(*) FROM `payment_methods`) AS formas_cadastradas,
+    (SELECT COUNT(*) FROM `investment_types`) AS tipos_cadastrados;
+
+SELECT 'Atualizacao concluida. Recarregue o sistema e teste as telas.' AS resultado;
+"""
 
 (OUT / "somase_atualizar_banco.sql").write_text(atualizacao)
 

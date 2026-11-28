@@ -1,11 +1,16 @@
 <?php
 namespace App\Models;
 
+use App\Core\Logger;
 use App\Core\Model;
+use Throwable;
 
 class InvestmentType extends Model
 {
     protected string $table = 'investment_types';
+
+    /** Evita repetir o aviso de tabela ausente a cada consulta. */
+    private static bool $avisou = false;
 
     public const BENCHMARKS = [
         'cdi' => 'CDI',
@@ -29,19 +34,43 @@ class InvestmentType extends Model
         $sql = 'SELECT * FROM investment_types WHERE (user_id IS NULL OR user_id = :user_id)';
         if ($activeOnly) $sql .= " AND status = 'active'";
         $sql .= ' ORDER BY name ASC';
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute(['user_id' => $userId]);
-        return $stmt->fetchAll();
+        try {
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute(['user_id' => $userId]);
+            return $stmt->fetchAll();
+        } catch (Throwable $e) {
+            self::avisarAusencia($e);
+            return [];
+        }
     }
 
     public function findForUser(int $id, int $userId): ?object
     {
-        $stmt = $this->pdo->prepare(
-            'SELECT * FROM investment_types WHERE id = :id AND (user_id IS NULL OR user_id = :user_id) LIMIT 1'
-        );
-        $stmt->execute(['id' => $id, 'user_id' => $userId]);
-        $type = $stmt->fetch();
-        return $type ?: null;
+        try {
+            $stmt = $this->pdo->prepare(
+                'SELECT * FROM investment_types WHERE id = :id AND (user_id IS NULL OR user_id = :user_id) LIMIT 1'
+            );
+            $stmt->execute(['id' => $id, 'user_id' => $userId]);
+            $type = $stmt->fetch();
+            return $type ?: null;
+        } catch (Throwable $e) {
+            self::avisarAusencia($e);
+            return null;
+        }
+    }
+
+    /** Registra uma unica vez que o catalogo ainda nao existe no banco. */
+    private static function avisarAusencia(Throwable $e): void
+    {
+        if (self::$avisou) {
+            return;
+        }
+        self::$avisou = true;
+        Logger::warning('investment_types.indisponivel', [
+            'motivo' => 'tabela ausente ou inacessivel; usando a lista padrao',
+            'erro'   => $e->getMessage(),
+            'sqlstate' => (string) $e->getCode(),
+        ]);
     }
 
     public function create(int $userId, array $data): int

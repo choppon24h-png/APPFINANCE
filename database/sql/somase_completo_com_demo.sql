@@ -41,7 +41,7 @@ CREATE TABLE `account_movements` (
   KEY `idx_account_movements_transfer` (`transfer_id`),
   CONSTRAINT `fk_account_movements_account` FOREIGN KEY (`account_id`) REFERENCES `accounts` (`id`) ON DELETE CASCADE,
   CONSTRAINT `fk_account_movements_transaction` FOREIGN KEY (`transaction_id`) REFERENCES `transactions` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=55 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=67 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 LOCK TABLES `account_movements` WRITE;
@@ -82,7 +82,7 @@ CREATE TABLE `accounts` (
   KEY `idx_accounts_status` (`status`),
   KEY `idx_accounts_bank` (`bank_code`),
   CONSTRAINT `fk_accounts_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=24 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=28 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 LOCK TABLES `accounts` WRITE;
@@ -112,7 +112,7 @@ CREATE TABLE `audit_logs` (
   KEY `idx_tenant` (`tenant_id`),
   KEY `idx_user` (`user_id`),
   KEY `idx_action` (`action`)
-) ENGINE=InnoDB AUTO_INCREMENT=75 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=80 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 LOCK TABLES `audit_logs` WRITE;
@@ -191,7 +191,12 @@ INSERT INTO `audit_logs` VALUES
 (71,NULL,1,'login','user',1,'{\"provider\":\"local\"}','127.0.0.1','Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36','2026-11-28 11:29:13'),
 (72,NULL,1,'login','user',1,'{\"provider\":\"local\"}','127.0.0.1','Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36','2026-11-28 11:29:22'),
 (73,NULL,1,'login','user',1,'{\"provider\":\"local\"}','127.0.0.1','Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36','2026-11-28 11:29:34'),
-(74,NULL,1,'login','user',1,'{\"provider\":\"local\"}','127.0.0.1','Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36','2026-11-28 11:29:43');
+(74,NULL,1,'login','user',1,'{\"provider\":\"local\"}','127.0.0.1','Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36','2026-11-28 11:29:43'),
+(75,NULL,1,'login','user',1,'{\"provider\":\"local\"}','127.0.0.1','Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36','2026-11-28 11:32:01'),
+(76,NULL,2,'login','user',2,'{\"provider\":\"local\"}','127.0.0.1','Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36','2026-11-28 11:32:43'),
+(77,NULL,2,'login','user',2,'{\"provider\":\"local\"}','127.0.0.1','curl/8.5.0','2026-11-28 11:33:13'),
+(78,NULL,2,'login','user',2,'{\"provider\":\"local\"}','127.0.0.1','curl/8.5.0','2026-11-28 15:34:57'),
+(79,NULL,2,'login','user',2,'{\"provider\":\"local\"}','127.0.0.1','Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36','2026-11-28 15:38:12');
 /*!40000 ALTER TABLE `audit_logs` ENABLE KEYS */;
 UNLOCK TABLES;
 DROP TABLE IF EXISTS `auth_attempts`;
@@ -207,7 +212,7 @@ CREATE TABLE `auth_attempts` (
   PRIMARY KEY (`id`),
   KEY `idx_attempts_lookup` (`action`,`ip`,`email`,`created_at`),
   KEY `idx_attempts_created` (`created_at`)
-) ENGINE=InnoDB AUTO_INCREMENT=65 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=70 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 LOCK TABLES `auth_attempts` WRITE;
@@ -276,7 +281,12 @@ INSERT INTO `auth_attempts` VALUES
 (61,'127.0.0.1','admin@example.com','login',1,'2026-11-28 11:29:13'),
 (62,'127.0.0.1','admin@example.com','login',1,'2026-11-28 11:29:22'),
 (63,'127.0.0.1','admin@example.com','login',1,'2026-11-28 11:29:34'),
-(64,'127.0.0.1','admin@example.com','login',1,'2026-11-28 11:29:43');
+(64,'127.0.0.1','admin@example.com','login',1,'2026-11-28 11:29:43'),
+(65,'127.0.0.1','admin@example.com','login',1,'2026-11-28 11:32:01'),
+(66,'127.0.0.1','admin@somase.com','login',1,'2026-11-28 11:32:43'),
+(67,'127.0.0.1','admin@somase.com','login',1,'2026-11-28 11:33:13'),
+(68,'127.0.0.1','admin@somase.com','login',1,'2026-11-28 15:34:57'),
+(69,'127.0.0.1','admin@somase.com','login',1,'2026-11-28 15:38:12');
 /*!40000 ALTER TABLE `auth_attempts` ENABLE KEYS */;
 UNLOCK TABLES;
 DROP TABLE IF EXISTS `banks`;
@@ -914,7 +924,7 @@ CREATE TABLE `investment_movements` (
   PRIMARY KEY (`id`),
   KEY `idx_investment_movements` (`investment_id`,`movement_date`),
   CONSTRAINT `fk_investment_movements_investment` FOREIGN KEY (`investment_id`) REFERENCES `investments` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=18 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=22 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 LOCK TABLES `investment_movements` WRITE;
@@ -941,7 +951,7 @@ CREATE TABLE `investment_returns` (
   UNIQUE KEY `uq_investment_return_period` (`investment_id`,`reference_month`,`reference_year`),
   KEY `idx_investment_returns_period` (`reference_year`,`reference_month`),
   CONSTRAINT `fk_investment_returns_investment` FOREIGN KEY (`investment_id`) REFERENCES `investments` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=17 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=19 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 LOCK TABLES `investment_returns` WRITE;
@@ -1027,7 +1037,7 @@ CREATE TABLE `investments` (
   KEY `idx_investments_type` (`user_id`,`investment_type_id`),
   CONSTRAINT `fk_investments_account` FOREIGN KEY (`account_id`) REFERENCES `accounts` (`id`),
   CONSTRAINT `fk_investments_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=14 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 LOCK TABLES `investments` WRITE;
@@ -1056,22 +1066,21 @@ CREATE TABLE `payment_methods` (
   UNIQUE KEY `uq_payment_methods_user_slug` (`user_id`,`slug`),
   KEY `idx_payment_methods_user` (`user_id`,`status`,`sort_order`),
   CONSTRAINT `fk_payment_methods_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 LOCK TABLES `payment_methods` WRITE;
 /*!40000 ALTER TABLE `payment_methods` DISABLE KEYS */;
 INSERT INTO `payment_methods` VALUES
-(1,NULL,'PIX','pix','bank',NULL,1,'active','2026-11-28 11:18:29','2026-11-28 11:18:29'),
-(2,NULL,'DÉBITO EM CONTA','debito_conta','bank',NULL,2,'active','2026-11-28 11:18:29','2026-11-28 11:18:29'),
-(3,NULL,'DÉBITO AUTOMÁTICO','debito_automatico','bank',NULL,3,'active','2026-11-28 11:18:29','2026-11-28 11:18:29'),
-(4,NULL,'CARTÃO DE DÉBITO','cartao_debito','card',NULL,4,'active','2026-11-28 11:18:29','2026-11-28 11:18:29'),
-(5,NULL,'CARTÃO DE CRÉDITO','cartao_credito','card',NULL,5,'active','2026-11-28 11:18:29','2026-11-28 11:18:29'),
-(6,NULL,'BOLETO','boleto','bank',NULL,6,'active','2026-11-28 11:18:29','2026-11-28 11:18:29'),
-(7,NULL,'DINHEIRO','dinheiro','cash',NULL,7,'active','2026-11-28 11:18:29','2026-11-28 11:18:29'),
-(8,NULL,'TRANSFERÊNCIA','transferencia','transfer',NULL,8,'active','2026-11-28 11:18:29','2026-11-28 11:18:29'),
-(9,NULL,'OUTRO','outro','other',NULL,9,'active','2026-11-28 11:18:29','2026-11-28 11:18:29'),
-(10,1,'DEBITO EM CONTA PJ','debito_em_conta_pj','bank',NULL,10,'active','2026-11-28 11:27:01','2026-11-28 11:27:01');
+(1,NULL,'PIX','pix','bank',NULL,1,'active','2026-11-28 15:37:46','2026-11-28 15:37:46'),
+(2,NULL,'DÉBITO EM CONTA','debito_conta','bank',NULL,2,'active','2026-11-28 15:37:46','2026-11-28 15:37:46'),
+(3,NULL,'DÉBITO AUTOMÁTICO','debito_automatico','bank',NULL,3,'active','2026-11-28 15:37:46','2026-11-28 15:37:46'),
+(4,NULL,'CARTÃO DE DÉBITO','cartao_debito','card',NULL,4,'active','2026-11-28 15:37:46','2026-11-28 15:37:46'),
+(5,NULL,'CARTÃO DE CRÉDITO','cartao_credito','card',NULL,5,'active','2026-11-28 15:37:46','2026-11-28 15:37:46'),
+(6,NULL,'BOLETO','boleto','bank',NULL,6,'active','2026-11-28 15:37:46','2026-11-28 15:37:46'),
+(7,NULL,'DINHEIRO','dinheiro','cash',NULL,7,'active','2026-11-28 15:37:46','2026-11-28 15:37:46'),
+(8,NULL,'TRANSFERÊNCIA','transferencia','transfer',NULL,8,'active','2026-11-28 15:37:46','2026-11-28 15:37:46'),
+(9,NULL,'OUTRO','outro','other',NULL,9,'active','2026-11-28 15:37:46','2026-11-28 15:37:46');
 /*!40000 ALTER TABLE `payment_methods` ENABLE KEYS */;
 UNLOCK TABLES;
 DROP TABLE IF EXISTS `permissions`;
@@ -1128,7 +1137,7 @@ CREATE TABLE `recurring_transactions` (
   CONSTRAINT `fk_recurring_category` FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`) ON DELETE SET NULL,
   CONSTRAINT `fk_recurring_cost_center` FOREIGN KEY (`cost_center_id`) REFERENCES `cost_centers` (`id`) ON DELETE SET NULL,
   CONSTRAINT `fk_recurring_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 LOCK TABLES `recurring_transactions` WRITE;
@@ -1242,7 +1251,7 @@ CREATE TABLE `transactions` (
   CONSTRAINT `fk_transactions_cost_center` FOREIGN KEY (`cost_center_id`) REFERENCES `cost_centers` (`id`) ON DELETE SET NULL,
   CONSTRAINT `fk_transactions_recurrence` FOREIGN KEY (`recurrence_id`) REFERENCES `recurring_transactions` (`id`) ON DELETE SET NULL,
   CONSTRAINT `fk_transactions_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=204 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=220 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 LOCK TABLES `transactions` WRITE;
@@ -1436,8 +1445,8 @@ CREATE TABLE `users` (
 LOCK TABLES `users` WRITE;
 /*!40000 ALTER TABLE `users` DISABLE KEYS */;
 INSERT INTO `users` VALUES
-(1,'Administrador','admin@example.com','$2b$10$vWAdPPDyhPW0u/UeSpdf1eLsXidEiwemycK/I9x7I1DcVjCLSTJii',1,'active',NULL,'local',NULL,NULL,NULL,NULL,'2026-11-28 11:29:43','2026-11-27 16:31:16','2026-11-28 11:29:43'),
-(2,'Administrador SOMASE','admin@somase.com','$2y$10$CLh5deExaEM80yzUleFVs.HBUfoLoeXRKr3TU4ACciq6a92wFoj/C',1,'active','1985-03-12','local',NULL,'2026-11-27 19:36:04','2026-11-27 19:47:49',NULL,'2026-11-28 00:53:21','2026-11-27 19:36:04','2026-11-28 00:53:21'),
+(1,'Administrador','admin@example.com','$2b$10$vWAdPPDyhPW0u/UeSpdf1eLsXidEiwemycK/I9x7I1DcVjCLSTJii',1,'active',NULL,'local',NULL,NULL,NULL,NULL,'2026-11-28 11:32:01','2026-11-27 16:31:16','2026-11-28 11:32:01'),
+(2,'Administrador SOMASE','admin@somase.com','$2y$10$CLh5deExaEM80yzUleFVs.HBUfoLoeXRKr3TU4ACciq6a92wFoj/C',1,'active','1985-03-12','local',NULL,'2026-11-27 19:36:04','2026-11-27 19:47:49',NULL,'2026-11-28 15:38:12','2026-11-27 19:36:04','2026-11-28 15:38:12'),
 (3,'Maria Oliveira Souza','maria.teste@example.com','$2y$10$XfOy0Vu5/hp6noKYQRtnJ.A/o21Jl4j8XRsOoYlIgrjgnTZW5Wy4S',3,'active','1992-07-15','local',NULL,NULL,'2026-11-27 19:45:29','127.0.0.1','2026-11-27 19:45:50','2026-11-27 19:45:29','2026-11-27 19:46:16'),
 (4,'Lucas Ferreira','lucas.oauth@example.com','$2y$10$UU7wwHE6Lk7YpQuTmk2nLeIv/Srqc.1G/G34.KIzinlCmBYRq7uWS',3,'active','1995-04-02','google',NULL,'2026-11-27 19:46:59','2026-11-27 19:53:45',NULL,'2026-11-27 19:55:14','2026-11-27 19:46:59','2026-11-27 19:55:14');
 /*!40000 ALTER TABLE `users` ENABLE KEYS */;
