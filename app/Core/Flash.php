@@ -30,8 +30,12 @@ class Flash
     /** Retorna e limpa as mensagens pendentes. */
     public static function pull(): array
     {
-        $messages = $_SESSION['_flash'] ?? [];
-        unset($_SESSION['_flash']);
-        return $messages;
+        // Aceita a chave nova (_flash) e a antiga (flash), usada por telas
+        // antigas/controllers que ainda gravam direto na sessao.
+        $messages = array_merge($_SESSION['_flash'] ?? [], $_SESSION['flash'] ?? []);
+        unset($_SESSION['_flash'], $_SESSION['flash']);
+        return array_values(array_filter($messages, static function ($m) {
+            return is_array($m) && isset($m['message']) && $m['message'] !== '';
+        }));
     }
 }

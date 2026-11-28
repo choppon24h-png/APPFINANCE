@@ -76,7 +76,7 @@ class AuthController extends Controller {
 
         // Perfil incompleto (usuarios criados por OAuth) vai direto completar
         // (com banco desatualizado, deixa o painel explicar o que falta)
-        if ($this->perfilIncompleto() && \App\Core\Schema::accessReady()) {
+        if ($this->perfilIncompleto() && \App\Core\Schema::accessReady() && !Auth::canAccessAdmin()) {
             $this->redirect('/cadastro/completar');
         }
 
