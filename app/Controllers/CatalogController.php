@@ -69,7 +69,18 @@ class CatalogController extends Controller
     {
         $model = new CostCenter();
         $edit = !empty($_GET['edit']) && ctype_digit((string) $_GET['edit']) ? $model->findForUser((int) $_GET['edit'], $this->userId()) : null;
-        $this->view('catalog/cost_centers', ['title' => 'Centros de custo', 'costCenters' => $model->forUser($this->userId()), 'editCenter' => $edit]);
+        $tipo = in_array($_GET['tipo'] ?? '', ['general', 'property', 'vehicle', 'company', 'project'], true) ? $_GET['tipo'] : '';
+        $todos = $model->forUser($this->userId());
+        $centros = $tipo === '' ? $todos : array_values(array_filter($todos, static fn($c) => ($c->kind ?? 'general') === $tipo));
+        $this->view('catalog/cost_centers', [
+            'title' => 'Imóveis e centros de custo',
+            'costCenters' => $centros,
+            'allCostCenters' => $todos,
+            'tipo' => $tipo,
+            'editCenter' => $edit,
+            'totais' => $model->monthlyTotals($this->userId(), date('Y-m-01'), date('Y-m-t')),
+            'mesReferencia' => date('m/Y'),
+        ]);
     }
 
     public function costCenterStore(): void
@@ -84,8 +95,18 @@ class CatalogController extends Controller
     public function costCenterUpdate(string $id): void
     {
         try {
-            $id = FinanceInput::intId($id, 'Centro de custo', true); $data = $this->costCenterInput($_POST);
-            if (!(new CostCenter())->update($id, $this->userId(), $data)) throw new \RuntimeException();
+            $id = FinanceInput::intId($id, 'Centro de custo', true);
+            $model = new CostCenter();
+            $atual = $model->findForUser($id, $this->userId());
+            if (!$atual) throw new \RuntimeException();
+            $data = $this->costCenterInput($_POST);
+            // Preserva status/kind/endereco/identificadores quando o formulario
+            // de edicao nao os envia (ex.: edicao rapida pelo cartao).
+            if (empty($_POST['status'])) $data['status'] = $atual->status;
+            if (empty($_POST['kind'])) $data['kind'] = $atual->kind ?? 'general';
+            if (empty($_POST['address'])) $data['address'] = $atual->address ?? null;
+            if (empty($_POST['identifiers'])) $data['identifiers'] = $atual->identifiers ?? null;
+            if (!$model->update($id, $this->userId(), $data)) throw new \RuntimeException();
             AuditLogger::log('update', 'cost_center', $id); $this->flash('success', 'Centro de custo atualizado.');
         } catch (Throwable $e) { $this->flash('error', 'Não foi possível atualizar o centro de custo.'); }
         $this->redirect('/centros-custo');
@@ -96,7 +117,12 @@ class CatalogController extends Controller
         try {
             $id = FinanceInput::intId($id, 'Centro de custo', true); $model = new CostCenter(); $center = $model->findForUser($id, $this->userId());
             if (!$center || $center->user_id === null) throw new \InvalidArgumentException();
-            $model->update($id, $this->userId(), ['name' => $center->name, 'code' => $center->code, 'description' => $center->description, 'status' => $center->status === 'active' ? 'inactive' : 'active']);
+            $model->update($id, $this->userId(), [
+                'name' => $center->name, 'code' => $center->code, 'description' => $center->description,
+                'kind' => $center->kind ?? 'general', 'address' => $center->address ?? null,
+                'identifiers' => $center->identifiers ?? null,
+                'status' => $center->status === 'active' ? 'inactive' : 'active',
+            ]);
             AuditLogger::log('status', 'cost_center', $id); $this->flash('success', 'Status atualizado.');
         } catch (Throwable $e) { $this->flash('error', 'Não foi possível atualizar o centro de custo.'); }
         $this->redirect('/centros-custo');
@@ -126,8 +152,12 @@ class CatalogController extends Controller
 
     private function costCenterInput(array $input): array
     {
+        $kind = FinanceInput::enum($input['kind'] ?? 'general', 'Tipo', ['general','property','vehicle','company','project'], 'general');
         return [
             'name' => FinanceInput::text($input['name'] ?? null, 'Nome', 120),
+            'kind' => $kind,
+            'address' => $kind === 'property' ? FinanceInput::text($input['address'] ?? null, 'Endereço', 255, false) : null,
+            'identifiers' => $kind === 'property' ? FinanceInput::text($input['identifiers'] ?? null, 'Identificadores', 500, false) : null,
             'code' => FinanceInput::text($input['code'] ?? null, 'Código', 40, false),
             'description' => FinanceInput::text($input['description'] ?? null, 'Descrição', 255, false),
             'status' => FinanceInput::enum($input['status'] ?? 'active', 'Status', ['active','inactive'], 'active'),

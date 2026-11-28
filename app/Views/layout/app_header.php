@@ -16,7 +16,7 @@ $menu = [
     ['/contas', 'Contas', 'wallet'],
     ['/investimentos', 'Investimentos', 'trend'],
     ['/categorias', 'Categorias', 'tag'],
-    ['/centros-custo', 'Centros de custo', 'layers'],
+    ['/centros-custo', 'Imóveis e centros', 'layers'],
     ['/relatorios', 'Relatórios', 'chart'],
 ];
 $menuAdmin = Auth::canAccessAdmin() ? [
