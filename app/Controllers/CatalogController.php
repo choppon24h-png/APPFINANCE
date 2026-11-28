@@ -6,6 +6,7 @@ use App\Core\Audit\AuditLogger;
 use App\Core\Controller;
 use App\Models\Category;
 use App\Models\CostCenter;
+use App\Services\CepService;
 use App\Support\FinanceInput;
 use Throwable;
 
@@ -87,7 +88,8 @@ class CatalogController extends Controller
     {
         try {
             $data = $this->costCenterInput($_POST); $id = (new CostCenter())->create($this->userId(), $data);
-            AuditLogger::log('create', 'cost_center', $id); $this->flash('success', 'Centro de custo criado.');
+            AuditLogger::log('create', 'cost_center', $id, ['kind' => $data['kind']]);
+            $this->flash('success', $data['kind'] === 'property' ? 'Imóvel cadastrado.' : 'Centro de custo criado.');
         } catch (Throwable $e) { $this->flash('error', $e instanceof \InvalidArgumentException ? $e->getMessage() : 'Não foi possível criar o centro de custo.'); }
         $this->redirect('/centros-custo');
     }
@@ -104,8 +106,12 @@ class CatalogController extends Controller
             // de edicao nao os envia (ex.: edicao rapida pelo cartao).
             if (empty($_POST['status'])) $data['status'] = $atual->status;
             if (empty($_POST['kind'])) $data['kind'] = $atual->kind ?? 'general';
-            if (empty($_POST['address'])) $data['address'] = $atual->address ?? null;
             if (empty($_POST['identifiers'])) $data['identifiers'] = $atual->identifiers ?? null;
+            if (empty($_POST['zip_code']) && empty($_POST['street']) && empty($_POST['address'])) {
+                foreach (['address', 'zip_code', 'street', 'address_number', 'complement', 'neighborhood', 'city', 'state'] as $campo) {
+                    $data[$campo] = $atual->$campo ?? null;
+                }
+            }
             if (!$model->update($id, $this->userId(), $data)) throw new \RuntimeException();
             AuditLogger::log('update', 'cost_center', $id); $this->flash('success', 'Centro de custo atualizado.');
         } catch (Throwable $e) { $this->flash('error', 'Não foi possível atualizar o centro de custo.'); }
@@ -120,6 +126,10 @@ class CatalogController extends Controller
             $model->update($id, $this->userId(), [
                 'name' => $center->name, 'code' => $center->code, 'description' => $center->description,
                 'kind' => $center->kind ?? 'general', 'address' => $center->address ?? null,
+                'zip_code' => $center->zip_code ?? null, 'street' => $center->street ?? null,
+                'address_number' => $center->address_number ?? null, 'complement' => $center->complement ?? null,
+                'neighborhood' => $center->neighborhood ?? null, 'city' => $center->city ?? null,
+                'state' => $center->state ?? null,
                 'identifiers' => $center->identifiers ?? null,
                 'status' => $center->status === 'active' ? 'inactive' : 'active',
             ]);
@@ -153,11 +163,26 @@ class CatalogController extends Controller
     private function costCenterInput(array $input): array
     {
         $kind = FinanceInput::enum($input['kind'] ?? 'general', 'Tipo', ['general','property','vehicle','company','project'], 'general');
-        return [
+        $comEndereco = in_array($kind, ['property', 'company'], true);
+        $cep = CepService::normalize($input['zip_code'] ?? null);
+        $endereco = [
+            'zip_code' => $cep ? CepService::format($cep) : null,
+            'street' => $comEndereco ? FinanceInput::text($input['street'] ?? null, 'Rua', 160, false) : null,
+            'address_number' => $comEndereco ? FinanceInput::text($input['address_number'] ?? null, 'Número', 20, false) : null,
+            'complement' => $comEndereco ? FinanceInput::text($input['complement'] ?? null, 'Complemento', 80, false) : null,
+            'neighborhood' => $comEndereco ? FinanceInput::text($input['neighborhood'] ?? null, 'Bairro', 80, false) : null,
+            'city' => $comEndereco ? FinanceInput::text($input['city'] ?? null, 'Cidade', 80, false) : null,
+            'state' => $comEndereco ? strtoupper((string) FinanceInput::text($input['state'] ?? null, 'UF', 2, false)) : null,
+        ];
+        $address = $comEndereco ? CostCenter::composeAddress($endereco) : null;
+        if ($address === null) {
+            $address = FinanceInput::text($input['address'] ?? null, 'Endereço', 255, false);
+        }
+        return $endereco + [
             'name' => FinanceInput::text($input['name'] ?? null, 'Nome', 120),
             'kind' => $kind,
-            'address' => $kind === 'property' ? FinanceInput::text($input['address'] ?? null, 'Endereço', 255, false) : null,
-            'identifiers' => $kind === 'property' ? FinanceInput::text($input['identifiers'] ?? null, 'Identificadores', 500, false) : null,
+            'address' => $address,
+            'identifiers' => $comEndereco ? FinanceInput::text($input['identifiers'] ?? null, 'Identificadores', 500, false) : null,
             'code' => FinanceInput::text($input['code'] ?? null, 'Código', 40, false),
             'description' => FinanceInput::text($input['description'] ?? null, 'Descrição', 255, false),
             'status' => FinanceInput::enum($input['status'] ?? 'active', 'Status', ['active','inactive'], 'active'),

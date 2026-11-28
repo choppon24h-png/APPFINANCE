@@ -28,33 +28,50 @@ class CostCenter extends Model
     public function create(int $userId, array $data): int
     {
         $stmt = $this->pdo->prepare(
-            'INSERT INTO cost_centers (user_id, name, kind, address, identifiers, code, description, status)
-             VALUES (:user_id, :name, :kind, :address, :identifiers, :code, :description, :status)'
+            'INSERT INTO cost_centers
+                (user_id, name, kind, address, zip_code, street, address_number, complement,
+                 neighborhood, city, state, identifiers, code, description, status)
+             VALUES
+                (:user_id, :name, :kind, :address, :zip_code, :street, :address_number, :complement,
+                 :neighborhood, :city, :state, :identifiers, :code, :description, :status)'
         );
-        $stmt->execute([
-            'user_id' => $userId, 'name' => $data['name'],
-            'kind' => $data['kind'] ?? 'general',
-            'address' => $data['address'] ?? null,
-            'identifiers' => $data['identifiers'] ?? null,
-            'code' => $data['code'], 'description' => $data['description'], 'status' => $data['status'],
-        ]);
+        $stmt->execute($this->params($userId, $data));
         return (int) $this->pdo->lastInsertId();
     }
 
     public function update(int $id, int $userId, array $data): bool
     {
         $stmt = $this->pdo->prepare(
-            'UPDATE cost_centers SET name = :name, kind = :kind, address = :address, identifiers = :identifiers,
-              code = :code, description = :description, status = :status
+            'UPDATE cost_centers SET name = :name, kind = :kind, address = :address,
+                zip_code = :zip_code, street = :street, address_number = :address_number,
+                complement = :complement, neighborhood = :neighborhood, city = :city, state = :state,
+                identifiers = :identifiers, code = :code, description = :description, status = :status
              WHERE id = :id AND user_id = :user_id'
         );
-        return $stmt->execute([
-            'id' => $id, 'user_id' => $userId, 'name' => $data['name'],
+        $params = $this->params($userId, $data);
+        $params['id'] = $id;
+        return $stmt->execute($params);
+    }
+
+    private function params(int $userId, array $data): array
+    {
+        return [
+            'user_id' => $userId,
+            'name' => $data['name'],
             'kind' => $data['kind'] ?? 'general',
             'address' => $data['address'] ?? null,
+            'zip_code' => $data['zip_code'] ?? null,
+            'street' => $data['street'] ?? null,
+            'address_number' => $data['address_number'] ?? null,
+            'complement' => $data['complement'] ?? null,
+            'neighborhood' => $data['neighborhood'] ?? null,
+            'city' => $data['city'] ?? null,
+            'state' => $data['state'] ?? null,
             'identifiers' => $data['identifiers'] ?? null,
-            'code' => $data['code'], 'description' => $data['description'], 'status' => $data['status'],
-        ]);
+            'code' => $data['code'] ?? null,
+            'description' => $data['description'] ?? null,
+            'status' => $data['status'] ?? 'active',
+        ];
     }
 
     public function delete(int $id, int $userId): bool
@@ -79,6 +96,22 @@ class CostCenter extends Model
             $out[(int) $row->cost_center_id] = (float) $row->total;
         }
         return $out;
+    }
+
+    /** Endereço completo montado a partir dos campos do CEP (usado no cartão). */
+    public static function composeAddress(array $data): ?string
+    {
+        $rua = trim((string) ($data['street'] ?? ''));
+        $numero = trim((string) ($data['address_number'] ?? ''));
+        $complemento = trim((string) ($data['complement'] ?? ''));
+        $bairro = trim((string) ($data['neighborhood'] ?? ''));
+        $cidade = trim((string) ($data['city'] ?? ''));
+        $uf = strtoupper(trim((string) ($data['state'] ?? '')));
+
+        $linha1 = trim($rua . ($numero !== '' ? ', ' . $numero : '') . ($complemento !== '' ? ' - ' . $complemento : ''));
+        $linha2 = trim($bairro . ($bairro !== '' && $cidade !== '' ? ', ' : '') . $cidade . ($uf !== '' ? '/' . $uf : ''));
+        $endereco = trim($linha1 . ($linha1 !== '' && $linha2 !== '' ? ' — ' : '') . $linha2);
+        return $endereco !== '' ? mb_substr($endereco, 0, 255) : null;
     }
 
     public function seedDefaults(int $userId): void

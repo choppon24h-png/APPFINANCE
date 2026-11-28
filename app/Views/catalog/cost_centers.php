@@ -19,7 +19,7 @@ $mes = $mesReferencia ?? date('m/Y');
     <div>
         <span class="eyebrow">Organização</span>
         <h2 class="page-heading">Imóveis e centros de custo</h2>
-        <p class="page-subtitle">Cadastre cada imóvel com o número de instalação/medidor para a leitura de contas reconhecer sozinha. Use os outros tipos para carro, empresa ou projeto.</p>
+        <p class="page-subtitle">Digite o CEP para preencher o endereço automaticamente e cadastre o número de instalação/medidor para a leitura de contas reconhecer o imóvel sozinha. Use os outros tipos para carro, empresa ou projeto.</p>
     </div>
 </section>
 
@@ -49,10 +49,27 @@ $mes = $mesReferencia ?? date('m/Y');
             <label class="field"><span>Nome</span><input type="text" name="name" value="<?= $centerValue('name') ?>" placeholder="Ex.: Apartamento Centro" maxlength="120" required></label>
             <label class="field"><span>Código <em>opcional</em></span><input type="text" name="code" value="<?= $centerValue('code') ?>" placeholder="Ex.: APTO" maxlength="40"></label>
 
-            <label class="field field-wide" data-property-field>
-                <span>Endereço do imóvel <em>opcional</em></span>
-                <input type="text" name="address" value="<?= $centerValue('address') ?>" placeholder="Rua, número, bairro, cidade" maxlength="255">
-            </label>
+            <div class="field field-wide address-block" data-address-field>
+                <span>Endereço <em>opcional</em></span>
+                <div class="cep-row">
+                    <label class="field">
+                        <span>CEP</span>
+                        <div class="input-action">
+                            <input type="text" name="zip_code" value="<?= $centerValue('zip_code') ?>" placeholder="00000-000" maxlength="9" inputmode="numeric" autocomplete="postal-code" data-cep-input>
+                            <button class="button button-ghost button-small" type="button" data-cep-search>Buscar CEP</button>
+                        </div>
+                    </label>
+                    <p class="field-note cep-status" data-cep-status>Digite o CEP e o endereço é preenchido por ViaCEP, BrasilAPI ou OpenCEP.</p>
+                </div>
+                <div class="form-grid address-grid">
+                    <label class="field field-wide"><span>Rua / logradouro</span><input type="text" name="street" value="<?= $centerValue('street') ?>" placeholder="Rua, avenida, praça" maxlength="160" data-cep-street></label>
+                    <label class="field"><span>Número</span><input type="text" name="address_number" value="<?= $centerValue('address_number') ?>" placeholder="123" maxlength="20" data-cep-number></label>
+                    <label class="field"><span>Complemento</span><input type="text" name="complement" value="<?= $centerValue('complement') ?>" placeholder="Apto, bloco" maxlength="80" data-cep-complement></label>
+                    <label class="field"><span>Bairro</span><input type="text" name="neighborhood" value="<?= $centerValue('neighborhood') ?>" maxlength="80" data-cep-neighborhood></label>
+                    <label class="field"><span>Cidade</span><input type="text" name="city" value="<?= $centerValue('city') ?>" maxlength="80" data-cep-city></label>
+                    <label class="field field-small"><span>UF</span><input type="text" name="state" value="<?= $centerValue('state') ?>" maxlength="2" placeholder="MG" data-cep-state></label>
+                </div>
+            </div>
 
             <label class="field field-wide" data-property-field>
                 <span>Números que identificam o imóvel <em>opcional</em></span>
@@ -71,6 +88,7 @@ $mes = $mesReferencia ?? date('m/Y');
                 </label>
             <?php endif; ?>
 
+            <input type="hidden" name="address" value="<?= $centerValue('address') ?>">
             <div class="form-actions">
                 <button class="button button-primary" type="submit"><?= $editing ? 'Salvar' : 'Adicionar' ?></button>
                 <?php if ($editing): ?><a class="button button-ghost" href="/centros-custo">Cancelar</a><?php endif; ?>
@@ -82,13 +100,16 @@ $mes = $mesReferencia ?? date('m/Y');
             if (!form) return;
             function atualizar() {
                 var tipo = form.querySelector('[data-kind-option]:checked');
-                var imovel = tipo && tipo.value === 'property';
-                form.querySelectorAll('[data-property-field]').forEach(function (f) { f.hidden = !imovel; });
+                var valor = tipo ? tipo.value : 'property';
+                var temEndereco = valor === 'property' || valor === 'company';
+                form.querySelectorAll('[data-address-field]').forEach(function (f) { f.hidden = !temEndereco; });
+                form.querySelectorAll('[data-property-field]').forEach(function (f) { f.hidden = valor !== 'property'; });
             }
             form.querySelectorAll('[data-kind-option]').forEach(function (r) { r.addEventListener('change', atualizar); });
             atualizar();
         })();
         </script>
+        <script src="/assets/js/cep.js" defer></script>
     </section>
 
     <section class="panel">
@@ -116,7 +137,9 @@ $mes = $mesReferencia ?? date('m/Y');
                             <strong><?= htmlspecialchars($center->name) ?></strong>
                             <span class="status-badge status-<?= $center->status ?>"><?= $center->status === 'active' ? 'Ativo' : 'Inativo' ?></span>
                         </header>
-                        <?php if (!empty($center->address)): ?><p class="center-address"><?= htmlspecialchars($center->address) ?></p><?php endif; ?>
+                        <?php if (!empty($center->address) || !empty($center->zip_code)): ?>
+                            <p class="center-address"><?php if (!empty($center->zip_code)): ?><span class="doc-chip">CEP <?= htmlspecialchars($center->zip_code) ?></span> <?php endif; ?><?= htmlspecialchars($center->address ?? '') ?></p>
+                        <?php endif; ?>
                         <?php if (!empty($center->identifiers)): ?>
                             <p class="center-ids"><?php foreach (array_filter(array_map('trim', explode(',', $center->identifiers))) as $id): ?><span class="doc-chip"><?= htmlspecialchars($id) ?></span><?php endforeach; ?></p>
                         <?php endif; ?>
