@@ -7,6 +7,7 @@ use App\Models\AccountMovement;
 use App\Models\Category;
 use App\Models\CostCenter;
 use App\Models\Investment;
+use App\Models\PaymentMethod;
 use App\Models\Transaction;
 use App\Support\FinanceInput;
 use DateTimeImmutable;
@@ -167,7 +168,7 @@ class FinanceService
         if ($from === $to) throw new InvalidArgumentException('Escolha contas diferentes para a transferência.');
         $amount = FinanceInput::amount($input['amount'] ?? null);
         $date = FinanceInput::date($input['transaction_date'] ?? null, 'Data', true);
-        $description = FinanceInput::text($input['description'] ?? 'Transferência entre contas', 'Descrição', 180);
+        $description = mb_strtoupper((string) FinanceInput::text($input['description'] ?? 'Transferência entre contas', 'Descrição', 180), 'UTF-8');
         if (!$this->accounts->findForUser($from, $userId) || !$this->accounts->findForUser($to, $userId)) {
             throw new InvalidArgumentException('Conta de origem ou destino inválida.');
         }
@@ -206,16 +207,41 @@ class FinanceService
         $endDate = FinanceInput::date($input['end_date'] ?? null, 'Data final da recorrência', false);
         if ($frequency === 'none') $endDate = null;
         if ($endDate && $endDate < $date) throw new InvalidArgumentException('A data final deve ser igual ou posterior ao início.');
+        // Todo lancamento e gravado em MAIUSCULAS (pedido do usuario). A
+        // descricao e a observacao sao normalizadas aqui para valer tambem
+        // na importacao de extrato e na duplicacao.
+        $descricao = mb_strtoupper((string) FinanceInput::text($input['description'] ?? null, 'Descrição', 180), 'UTF-8');
+        $observacao = FinanceInput::text($input['notes'] ?? null, 'Observação', 2000, false);
+        if ($observacao !== null) {
+            $observacao = mb_strtoupper($observacao, 'UTF-8');
+        }
         return [
-            'type' => $type, 'status' => $status, 'description' => FinanceInput::text($input['description'] ?? null, 'Descrição', 180),
+            'type' => $type, 'status' => $status, 'description' => $descricao,
             'amount' => FinanceInput::amount($input['amount'] ?? null), 'account_id' => FinanceInput::intId($input['account_id'] ?? null, 'Conta', true),
             'category_id' => FinanceInput::intId($input['category_id'] ?? null, 'Categoria'), 'cost_center_id' => FinanceInput::intId($input['cost_center_id'] ?? null, 'Centro de custo'),
             'transaction_date' => $date, 'due_date' => FinanceInput::date($input['due_date'] ?? null, 'Data de vencimento', false),
             'payment_date' => FinanceInput::date($input['payment_date'] ?? null, 'Data de pagamento', false),
-            'payment_method' => FinanceInput::nullableEnum($input['payment_method'] ?? null, 'Forma de pagamento', ['pix','debit','credit','boleto','cash','transfer','other']),
-            'notes' => FinanceInput::text($input['notes'] ?? null, 'Observação', 2000, false), 'frequency' => $frequency, 'end_date' => $endDate,
+            'payment_method' => $this->paymentMethod($userId, $input['payment_method'] ?? null),
+            'notes' => $observacao, 'frequency' => $frequency, 'end_date' => $endDate,
             'document_code' => FinanceInput::text($input['document_code'] ?? null, 'Código do documento', 64, false),
         ];
+    }
+
+    /**
+     * Aceita qualquer slug do catalogo de formas de pagamento do usuario
+     * (inclui DÉBITO EM CONTA) e os slugs antigos, para nao perder historico.
+     */
+    private function paymentMethod(int $userId, mixed $value): ?string
+    {
+        $slug = trim((string) ($value ?? ''));
+        if ($slug === '') return null;
+        if (!preg_match('/^[a-z0-9_]{1,40}$/', $slug)) {
+            throw new InvalidArgumentException('Forma de pagamento inválida.');
+        }
+        if (isset(PaymentMethod::LEGACY[$slug]) || (new PaymentMethod())->existsForUser($userId, $slug)) {
+            return $slug;
+        }
+        throw new InvalidArgumentException('Forma de pagamento inválida.');
     }
 
     private function assertReferences(int $userId, array $data): void

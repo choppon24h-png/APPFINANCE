@@ -8,6 +8,7 @@ use App\Core\Logger;
 use App\Models\Account;
 use App\Models\Category;
 use App\Models\CostCenter;
+use App\Models\PaymentMethod;
 use App\Models\Transaction;
 use App\Services\Documents\AttachmentStorage;
 use App\Services\FinanceService;
@@ -20,6 +21,10 @@ class TransactionController extends Controller
 
     public function index(): void
     {
+        // Sem nenhum filtro na URL, abre nos DEBITOS DO MES (pedido do
+        // usuario). Qualquer parametro na query string desliga o padrao,
+        // inclusive o link "Ver todos" (/lancamentos?filtro=1).
+        $semFiltro = empty($_GET);
         $filters = [];
         foreach (['search','type','status','date_from','date_to','center_kind'] as $key) {
             if (!empty($_GET[$key])) $filters[$key] = trim((string) $_GET[$key]);
@@ -27,16 +32,27 @@ class TransactionController extends Controller
         foreach (['account_id','category_id','cost_center_id'] as $key) {
             if (!empty($_GET[$key]) && ctype_digit((string) $_GET[$key])) $filters[$key] = (int) $_GET[$key];
         }
+        if ($semFiltro) {
+            $filters['type'] = 'expense';
+            $filters['date_from'] = date('Y-m-01');
+            $filters['date_to'] = date('Y-m-t');
+        }
         $page = max(1, (int) ($_GET['page'] ?? 1));
         $model = new Transaction();
         $perPage = 20;
         $total = $model->countForUser($this->userId(), $filters);
+        $inicioMes = date('Y-m-01');
+        $fimMes = date('Y-m-t');
         $this->view('transactions/index', [
             'title' => 'Lançamentos', 'transactions' => $model->paginateForUser($this->userId(), $filters, $page, $perPage),
             'filters' => $filters, 'page' => $page, 'pages' => max(1, (int) ceil($total / $perPage)),
             'accounts' => (new Account())->forUser($this->userId()),
             'categories' => (new Category())->forUser($this->userId()),
             'costCenters' => (new CostCenter())->forUser($this->userId()),
+            'resumoMes' => $model->summary($this->userId(), $inicioMes, $fimMes),
+            'mesReferencia' => date('m/Y'),
+            'padraoDebitos' => $semFiltro,
+            'paymentMethods' => (new PaymentMethod())->options($this->userId()),
         ]);
     }
 
@@ -137,6 +153,7 @@ class TransactionController extends Controller
             'accounts' => (new Account())->forUser($this->userId(), true),
             'categories' => (new Category())->forUser($this->userId(), null, true),
             'costCenters' => (new CostCenter())->forUser($this->userId(), true),
+            'paymentMethods' => (new PaymentMethod())->options($this->userId(), $transaction->payment_method ?? null),
         ];
     }
 
