@@ -51,7 +51,7 @@ CREATE TABLE `account_movements` (
   KEY `idx_account_movements_transfer` (`transfer_id`),
   CONSTRAINT `fk_account_movements_account` FOREIGN KEY (`account_id`) REFERENCES `accounts` (`id`) ON DELETE CASCADE,
   CONSTRAINT `fk_account_movements_transaction` FOREIGN KEY (`transaction_id`) REFERENCES `transactions` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=31 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=55 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `accounts`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -63,6 +63,9 @@ CREATE TABLE `accounts` (
   `bank_name` varchar(120) DEFAULT NULL,
   `bank_code` char(3) DEFAULT NULL,
   `account_type` enum('checking','savings','investment','cash','other') NOT NULL DEFAULT 'checking',
+  `investment_type_id` int(10) unsigned DEFAULT NULL,
+  `investment_rate` decimal(12,6) DEFAULT NULL,
+  `investment_rate_period` varchar(10) NOT NULL DEFAULT 'annual',
   `agency` varchar(40) DEFAULT NULL,
   `account_number` varchar(80) DEFAULT NULL,
   `initial_balance` decimal(15,2) NOT NULL DEFAULT 0.00,
@@ -77,7 +80,7 @@ CREATE TABLE `accounts` (
   KEY `idx_accounts_status` (`status`),
   KEY `idx_accounts_bank` (`bank_code`),
   CONSTRAINT `fk_accounts_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=16 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=24 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `audit_logs`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -97,7 +100,7 @@ CREATE TABLE `audit_logs` (
   KEY `idx_tenant` (`tenant_id`),
   KEY `idx_user` (`user_id`),
   KEY `idx_action` (`action`)
-) ENGINE=InnoDB AUTO_INCREMENT=39 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=75 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `auth_attempts`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -112,7 +115,7 @@ CREATE TABLE `auth_attempts` (
   PRIMARY KEY (`id`),
   KEY `idx_attempts_lookup` (`action`,`ip`,`email`,`created_at`),
   KEY `idx_attempts_created` (`created_at`)
-) ENGINE=InnoDB AUTO_INCREMENT=45 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=65 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `banks`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -197,6 +200,16 @@ CREATE TABLE `cost_centers` (
   `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `user_id` int(10) unsigned DEFAULT NULL,
   `name` varchar(120) NOT NULL,
+  `kind` varchar(20) NOT NULL DEFAULT 'general',
+  `address` varchar(255) DEFAULT NULL,
+  `zip_code` varchar(9) DEFAULT NULL,
+  `street` varchar(160) DEFAULT NULL,
+  `address_number` varchar(20) DEFAULT NULL,
+  `complement` varchar(80) DEFAULT NULL,
+  `neighborhood` varchar(80) DEFAULT NULL,
+  `city` varchar(80) DEFAULT NULL,
+  `state` char(2) DEFAULT NULL,
+  `identifiers` varchar(500) DEFAULT NULL,
   `code` varchar(40) DEFAULT NULL,
   `description` varchar(255) DEFAULT NULL,
   `status` enum('active','inactive') NOT NULL DEFAULT 'active',
@@ -204,8 +217,9 @@ CREATE TABLE `cost_centers` (
   `updated_at` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   PRIMARY KEY (`id`),
   KEY `idx_cost_centers_user` (`user_id`,`status`),
+  KEY `idx_cost_centers_kind` (`user_id`,`kind`),
   CONSTRAINT `fk_cost_centers_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `investment_movements`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -222,7 +236,7 @@ CREATE TABLE `investment_movements` (
   PRIMARY KEY (`id`),
   KEY `idx_investment_movements` (`investment_id`,`movement_date`),
   CONSTRAINT `fk_investment_movements_investment` FOREIGN KEY (`investment_id`) REFERENCES `investments` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=18 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `investment_returns`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -242,7 +256,27 @@ CREATE TABLE `investment_returns` (
   UNIQUE KEY `uq_investment_return_period` (`investment_id`,`reference_month`,`reference_year`),
   KEY `idx_investment_returns_period` (`reference_year`,`reference_month`),
   CONSTRAINT `fk_investment_returns_investment` FOREIGN KEY (`investment_id`) REFERENCES `investments` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=17 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `investment_types`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `investment_types` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `user_id` int(10) unsigned DEFAULT NULL,
+  `name` varchar(80) NOT NULL,
+  `slug` varchar(40) NOT NULL,
+  `benchmark` varchar(20) NOT NULL DEFAULT 'none',
+  `default_rate` decimal(12,6) DEFAULT NULL,
+  `default_rate_period` enum('annual','monthly') NOT NULL DEFAULT 'annual',
+  `status` enum('active','inactive') NOT NULL DEFAULT 'active',
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_investment_types_user_slug` (`user_id`,`slug`),
+  KEY `idx_investment_types_user` (`user_id`,`status`),
+  CONSTRAINT `fk_investment_types_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=16 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `investments`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -253,11 +287,14 @@ CREATE TABLE `investments` (
   `account_id` int(10) unsigned NOT NULL,
   `institution` varchar(120) NOT NULL,
   `investment_type` varchar(80) NOT NULL,
+  `investment_type_id` int(10) unsigned DEFAULT NULL,
   `name` varchar(150) NOT NULL,
   `amount_invested` decimal(15,2) NOT NULL DEFAULT 0.00,
   `application_date` date NOT NULL,
   `interest_rate` decimal(12,6) DEFAULT NULL,
   `rate_type` varchar(40) DEFAULT NULL,
+  `benchmark_rate` decimal(12,6) DEFAULT NULL,
+  `rate_period` varchar(10) NOT NULL DEFAULT 'annual',
   `benchmark` varchar(80) DEFAULT NULL,
   `liquidity` varchar(80) DEFAULT NULL,
   `maturity_date` date DEFAULT NULL,
@@ -268,9 +305,30 @@ CREATE TABLE `investments` (
   PRIMARY KEY (`id`),
   KEY `idx_investments_user` (`user_id`,`status`),
   KEY `idx_investments_account` (`account_id`),
+  KEY `idx_investments_type` (`user_id`,`investment_type_id`),
   CONSTRAINT `fk_investments_account` FOREIGN KEY (`account_id`) REFERENCES `accounts` (`id`),
   CONSTRAINT `fk_investments_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `payment_methods`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `payment_methods` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `user_id` int(10) unsigned DEFAULT NULL,
+  `name` varchar(80) NOT NULL,
+  `slug` varchar(40) NOT NULL,
+  `kind` varchar(20) NOT NULL DEFAULT 'other',
+  `icon` varchar(20) DEFAULT NULL,
+  `sort_order` int(11) NOT NULL DEFAULT 0,
+  `status` enum('active','inactive') NOT NULL DEFAULT 'active',
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_payment_methods_user_slug` (`user_id`,`slug`),
+  KEY `idx_payment_methods_user` (`user_id`,`status`,`sort_order`),
+  CONSTRAINT `fk_payment_methods_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `permissions`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -315,7 +373,7 @@ CREATE TABLE `recurring_transactions` (
   CONSTRAINT `fk_recurring_category` FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`) ON DELETE SET NULL,
   CONSTRAINT `fk_recurring_cost_center` FOREIGN KEY (`cost_center_id`) REFERENCES `cost_centers` (`id`) ON DELETE SET NULL,
   CONSTRAINT `fk_recurring_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `role_permissions`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -375,6 +433,9 @@ CREATE TABLE `transactions` (
   `status` enum('pending','paid','overdue','cancelled','expected','received','late') NOT NULL DEFAULT 'pending',
   `payment_method` varchar(40) DEFAULT NULL,
   `notes` text DEFAULT NULL,
+  `document_code` varchar(64) DEFAULT NULL,
+  `import_ref` varchar(100) DEFAULT NULL,
+  `attachment_path` varchar(255) DEFAULT NULL,
   `recurrence_id` int(10) unsigned DEFAULT NULL,
   `recurrence_key` varchar(80) DEFAULT NULL,
   `transfer_id` char(36) DEFAULT NULL,
@@ -389,12 +450,14 @@ CREATE TABLE `transactions` (
   KEY `idx_transactions_cost_center` (`cost_center_id`),
   KEY `idx_transactions_recurrence` (`recurrence_id`,`transaction_date`),
   KEY `idx_transactions_transfer` (`transfer_id`),
+  KEY `idx_transactions_document` (`user_id`,`document_code`),
+  KEY `idx_transactions_import` (`user_id`,`account_id`,`import_ref`),
   CONSTRAINT `fk_transactions_account` FOREIGN KEY (`account_id`) REFERENCES `accounts` (`id`),
   CONSTRAINT `fk_transactions_category` FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`) ON DELETE SET NULL,
   CONSTRAINT `fk_transactions_cost_center` FOREIGN KEY (`cost_center_id`) REFERENCES `cost_centers` (`id`) ON DELETE SET NULL,
   CONSTRAINT `fk_transactions_recurrence` FOREIGN KEY (`recurrence_id`) REFERENCES `recurring_transactions` (`id`) ON DELETE SET NULL,
   CONSTRAINT `fk_transactions_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=175 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=204 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `user_identities`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -527,11 +590,13 @@ UNLOCK TABLES;
 
 LOCK TABLES `cost_centers` WRITE;
 /*!40000 ALTER TABLE `cost_centers` DISABLE KEYS */;
-INSERT INTO `cost_centers` (`id`, `user_id`, `name`, `code`, `description`, `status`, `created_at`, `updated_at`) VALUES (1,NULL,'Pessoal','PES','Despesas e receitas pessoais','active','2026-11-27 16:31:16','2026-11-27 16:31:16');
-INSERT INTO `cost_centers` (`id`, `user_id`, `name`, `code`, `description`, `status`, `created_at`, `updated_at`) VALUES (2,NULL,'Casa','CAS','Moradia e manutenção','active','2026-11-27 16:31:16','2026-11-27 16:31:16');
-INSERT INTO `cost_centers` (`id`, `user_id`, `name`, `code`, `description`, `status`, `created_at`, `updated_at`) VALUES (3,NULL,'Empresa','EMP','Operação do negócio','active','2026-11-27 16:31:16','2026-11-27 16:31:16');
-INSERT INTO `cost_centers` (`id`, `user_id`, `name`, `code`, `description`, `status`, `created_at`, `updated_at`) VALUES (4,NULL,'Carro','CAR','Veículo e transporte','active','2026-11-27 16:31:16','2026-11-27 16:31:16');
-INSERT INTO `cost_centers` (`id`, `user_id`, `name`, `code`, `description`, `status`, `created_at`, `updated_at`) VALUES (5,NULL,'Operacional','OPE','Custos operacionais gerais','active','2026-11-27 16:31:16','2026-11-27 16:31:16');
+INSERT INTO `cost_centers` (`id`, `user_id`, `name`, `kind`, `address`, `zip_code`, `street`, `address_number`, `complement`, `neighborhood`, `city`, `state`, `identifiers`, `code`, `description`, `status`, `created_at`, `updated_at`) VALUES (1,NULL,'Pessoal','general',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,'PES','Despesas e receitas pessoais','active','2026-11-27 16:31:16','2026-11-27 16:31:16');
+INSERT INTO `cost_centers` (`id`, `user_id`, `name`, `kind`, `address`, `zip_code`, `street`, `address_number`, `complement`, `neighborhood`, `city`, `state`, `identifiers`, `code`, `description`, `status`, `created_at`, `updated_at`) VALUES (2,NULL,'Casa','general',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,'CAS','Moradia e manutenção','active','2026-11-27 16:31:16','2026-11-27 16:31:16');
+INSERT INTO `cost_centers` (`id`, `user_id`, `name`, `kind`, `address`, `zip_code`, `street`, `address_number`, `complement`, `neighborhood`, `city`, `state`, `identifiers`, `code`, `description`, `status`, `created_at`, `updated_at`) VALUES (3,NULL,'Empresa','general',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,'EMP','Operação do negócio','active','2026-11-27 16:31:16','2026-11-27 16:31:16');
+INSERT INTO `cost_centers` (`id`, `user_id`, `name`, `kind`, `address`, `zip_code`, `street`, `address_number`, `complement`, `neighborhood`, `city`, `state`, `identifiers`, `code`, `description`, `status`, `created_at`, `updated_at`) VALUES (4,NULL,'Carro','general',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,'CAR','Veículo e transporte','active','2026-11-27 16:31:16','2026-11-27 16:31:16');
+INSERT INTO `cost_centers` (`id`, `user_id`, `name`, `kind`, `address`, `zip_code`, `street`, `address_number`, `complement`, `neighborhood`, `city`, `state`, `identifiers`, `code`, `description`, `status`, `created_at`, `updated_at`) VALUES (5,NULL,'Operacional','general',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,'OPE','Custos operacionais gerais','active','2026-11-27 16:31:16','2026-11-27 16:31:16');
+INSERT INTO `cost_centers` (`id`, `user_id`, `name`, `kind`, `address`, `zip_code`, `street`, `address_number`, `complement`, `neighborhood`, `city`, `state`, `identifiers`, `code`, `description`, `status`, `created_at`, `updated_at`) VALUES (6,2,'Apartamento Centro','property','Rua das Flores 100',NULL,NULL,NULL,NULL,NULL,NULL,NULL,'99887766, 123456789',NULL,NULL,'active','2026-11-28 00:45:02','2026-11-28 00:45:02');
+INSERT INTO `cost_centers` (`id`, `user_id`, `name`, `kind`, `address`, `zip_code`, `street`, `address_number`, `complement`, `neighborhood`, `city`, `state`, `identifiers`, `code`, `description`, `status`, `created_at`, `updated_at`) VALUES (8,1,'Imovel Teste CEP','property','Praça Sete de Setembro, 1000 - Sala 5 — Centro, Belo Horizonte/MG','30130-010','Praça Sete de Setembro','1000','Sala 5','Centro','Belo Horizonte','MG','11223344',NULL,NULL,'active','2026-11-28 11:26:53','2026-11-28 11:26:53');
 /*!40000 ALTER TABLE `cost_centers` ENABLE KEYS */;
 UNLOCK TABLES;
 

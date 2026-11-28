@@ -83,6 +83,13 @@ Router::group([
     Router::get('/investimentos', 'InvestmentController@index');
     Router::get('/investimentos/novo', 'InvestmentController@create');
     Router::post('/investimentos', 'InvestmentController@store');
+    Router::get('/investimentos/tipos', 'InvestmentTypeController@index');
+    Router::post('/investimentos/tipos', 'InvestmentTypeController@store');
+    Router::post('/investimentos/tipos/{id}/atualizar', 'InvestmentTypeController@update');
+    Router::post('/investimentos/tipos/{id}/toggle', 'InvestmentTypeController@toggle');
+    Router::post('/investimentos/tipos/{id}/excluir', 'InvestmentTypeController@destroy');
+    Router::get('/investimentos/{id}/editar', 'InvestmentController@edit');
+    Router::post('/investimentos/{id}/atualizar', 'InvestmentController@update');
     Router::get('/investimentos/{id}/resgatar', 'InvestmentController@redeemForm');
     Router::post('/investimentos/{id}/resgatar', 'InvestmentController@redeem');
     Router::get('/investimentos/{id}/rendimento', 'InvestmentController@returnForm');
@@ -94,6 +101,11 @@ Router::group([
     Router::post('/categorias/{id}/atualizar', 'CatalogController@categoryUpdate');
     Router::post('/categorias/{id}/toggle', 'CatalogController@categoryToggle');
     Router::post('/categorias/{id}/excluir', 'CatalogController@categoryDelete');
+    Router::get('/formas-pagamento', 'PaymentMethodController@index');
+    Router::post('/formas-pagamento', 'PaymentMethodController@store');
+    Router::post('/formas-pagamento/{id}/atualizar', 'PaymentMethodController@update');
+    Router::post('/formas-pagamento/{id}/toggle', 'PaymentMethodController@toggle');
+    Router::post('/formas-pagamento/{id}/excluir', 'PaymentMethodController@destroy');
 
     Router::get('/centros-custo', 'CatalogController@costCenters');
     Router::post('/centros-custo', 'CatalogController@costCenterStore');
@@ -108,6 +120,8 @@ Router::group([
         Router::get('/cnpj/{cnpj}', 'CnpjController@consultar');
         // Autocomplete de bancos (catalogo COMPE da migration 0005)
         Router::get('/bancos', 'BankController@search');
+        // Consulta de CEP com fallback (ViaCEP -> BrasilAPI -> OpenCEP)
+        Router::get('/cep', 'CepController@lookup');
     });
 
     // Rota antiga de usuarios: agora aponta para o painel administrativo

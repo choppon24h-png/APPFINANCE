@@ -41,11 +41,18 @@ CREATE TABLE `account_movements` (
   KEY `idx_account_movements_transfer` (`transfer_id`),
   CONSTRAINT `fk_account_movements_account` FOREIGN KEY (`account_id`) REFERENCES `accounts` (`id`) ON DELETE CASCADE,
   CONSTRAINT `fk_account_movements_transaction` FOREIGN KEY (`transaction_id`) REFERENCES `transactions` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=31 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=55 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 LOCK TABLES `account_movements` WRITE;
 /*!40000 ALTER TABLE `account_movements` DISABLE KEYS */;
+INSERT INTO `account_movements` VALUES
+(37,18,183,NULL,'transaction',-195.79,-195.79,'2026-11-05','2026-11-28 00:46:53'),
+(38,18,184,NULL,'transaction',2500.00,2304.21,'2026-11-10','2026-11-28 00:46:53'),
+(39,18,185,NULL,'transaction',-10.50,2293.71,'2026-11-27','2026-11-28 00:48:03'),
+(40,18,186,NULL,'transaction',-10.50,2283.21,'2026-11-27','2026-11-28 00:48:37'),
+(53,1,203,NULL,'transaction',-123.45,55117.75,'2026-11-28','2026-11-28 11:26:37'),
+(54,1,NULL,NULL,'investment',-10000.00,45117.75,'2026-11-28','2026-11-28 11:27:07');
 /*!40000 ALTER TABLE `account_movements` ENABLE KEYS */;
 UNLOCK TABLES;
 DROP TABLE IF EXISTS `accounts`;
@@ -58,6 +65,9 @@ CREATE TABLE `accounts` (
   `bank_name` varchar(120) DEFAULT NULL,
   `bank_code` char(3) DEFAULT NULL,
   `account_type` enum('checking','savings','investment','cash','other') NOT NULL DEFAULT 'checking',
+  `investment_type_id` int(10) unsigned DEFAULT NULL,
+  `investment_rate` decimal(12,6) DEFAULT NULL,
+  `investment_rate_period` varchar(10) NOT NULL DEFAULT 'annual',
   `agency` varchar(40) DEFAULT NULL,
   `account_number` varchar(80) DEFAULT NULL,
   `initial_balance` decimal(15,2) NOT NULL DEFAULT 0.00,
@@ -72,14 +82,16 @@ CREATE TABLE `accounts` (
   KEY `idx_accounts_status` (`status`),
   KEY `idx_accounts_bank` (`bank_code`),
   CONSTRAINT `fk_accounts_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=16 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=24 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 LOCK TABLES `accounts` WRITE;
 /*!40000 ALTER TABLE `accounts` DISABLE KEYS */;
 INSERT INTO `accounts` VALUES
-(1,1,'Conta Corrente','Banco do Brasil',NULL,'checking','1234','56789-0',4200.00,55241.20,'2026-04-01','active','SOMASE demo','2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(2,1,'Reserva de emergencia','Nubank',NULL,'savings',NULL,'0001',12000.00,12000.00,'2026-04-01','active','SOMASE demo','2026-11-27 16:31:16','2026-11-27 16:31:16');
+(1,1,'Conta Corrente','Banco do Brasil',NULL,'checking',NULL,NULL,'annual','1234','56789-0',4200.00,45117.75,'2026-04-01','active','SOMASE demo','2026-11-27 16:31:16','2026-11-28 11:27:07'),
+(2,1,'Reserva de emergencia','Nubank',NULL,'savings',NULL,NULL,'annual',NULL,'0001',12000.00,12000.00,'2026-04-01','active','SOMASE demo','2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(18,2,'Conta Teste Import','Banco do Brasil',NULL,'checking',NULL,NULL,'annual',NULL,NULL,1000.00,2283.21,'2026-11-28','active',NULL,'2026-11-28 00:46:40','2026-11-28 00:48:37'),
+(23,1,'Conta Investimento Teste',NULL,NULL,'investment',15,110.000000,'annual',NULL,NULL,0.00,0.00,'2026-11-28','active',NULL,'2026-11-28 11:27:20','2026-11-28 11:27:20');
 /*!40000 ALTER TABLE `accounts` ENABLE KEYS */;
 UNLOCK TABLES;
 DROP TABLE IF EXISTS `audit_logs`;
@@ -100,7 +112,7 @@ CREATE TABLE `audit_logs` (
   KEY `idx_tenant` (`tenant_id`),
   KEY `idx_user` (`user_id`),
   KEY `idx_action` (`action`)
-) ENGINE=InnoDB AUTO_INCREMENT=39 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=75 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 LOCK TABLES `audit_logs` WRITE;
@@ -143,7 +155,43 @@ INSERT INTO `audit_logs` VALUES
 (35,NULL,1,'create','account',12,'{\"account_type\":\"checking\"}','127.0.0.1','Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36','2026-11-27 23:52:34'),
 (36,NULL,1,'login','user',1,'{\"provider\":\"local\"}','127.0.0.1','Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36','2026-11-27 23:53:34'),
 (37,NULL,1,'create','account',15,'{\"account_type\":\"checking\"}','127.0.0.1','Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36','2026-11-27 23:53:35'),
-(38,NULL,1,'login','user',1,'{\"provider\":\"local\"}','127.0.0.1','Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36','2026-11-27 23:53:44');
+(38,NULL,1,'login','user',1,'{\"provider\":\"local\"}','127.0.0.1','Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36','2026-11-27 23:53:44'),
+(39,NULL,2,'login','user',2,'{\"provider\":\"local\"}','127.0.0.1','Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36','2026-11-28 00:43:27'),
+(40,NULL,2,'login','user',2,'{\"provider\":\"local\"}','127.0.0.1','Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36','2026-11-28 00:45:00'),
+(41,NULL,2,'create','cost_center',6,'[]','127.0.0.1','Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36','2026-11-28 00:45:02'),
+(42,NULL,2,'login','user',2,'{\"provider\":\"local\"}','127.0.0.1','Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36','2026-11-28 00:45:43'),
+(43,NULL,2,'create','cost_center',7,'[]','127.0.0.1','Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36','2026-11-28 00:45:44'),
+(44,NULL,2,'login','user',2,'{\"provider\":\"local\"}','127.0.0.1','Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36','2026-11-28 00:46:49'),
+(45,NULL,2,'import_preview','transaction',NULL,'{\"account_id\":18,\"arquivo\":\"extrato-teste.csv\",\"linhas\":2}','127.0.0.1','Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36','2026-11-28 00:46:53'),
+(46,NULL,2,'import','transaction',NULL,'{\"account_id\":18,\"importados\":2,\"ignorados\":0,\"erros\":0}','127.0.0.1','Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36','2026-11-28 00:46:53'),
+(47,NULL,2,'login','user',2,'{\"provider\":\"local\"}','127.0.0.1','Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36','2026-11-28 00:46:54'),
+(48,NULL,2,'login','user',2,'{\"provider\":\"local\"}','127.0.0.1','Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36','2026-11-28 00:48:02'),
+(49,NULL,2,'create','transaction',185,'{\"type\":\"expense\"}','127.0.0.1','Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36','2026-11-28 00:48:03'),
+(50,NULL,2,'import_preview','transaction',NULL,'{\"account_id\":18,\"arquivo\":\"extrato-teste.csv\",\"linhas\":2}','127.0.0.1','Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36','2026-11-28 00:48:04'),
+(51,NULL,2,'login','user',2,'{\"provider\":\"local\"}','127.0.0.1','Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36','2026-11-28 00:48:36'),
+(52,NULL,2,'create','transaction',186,'{\"type\":\"expense\"}','127.0.0.1','Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36','2026-11-28 00:48:37'),
+(53,NULL,2,'import_preview','transaction',NULL,'{\"account_id\":18,\"arquivo\":\"extrato-teste.csv\",\"linhas\":2}','127.0.0.1','Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36','2026-11-28 00:48:38'),
+(54,NULL,2,'login','user',2,'{\"provider\":\"local\"}','127.0.0.1','Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36','2026-11-28 00:53:21'),
+(55,NULL,2,'import_preview','transaction',NULL,'{\"account_id\":18,\"arquivo\":\"extrato-teste.ofx\",\"linhas\":2}','127.0.0.1','Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36','2026-11-28 00:53:22'),
+(56,NULL,1,'login','user',1,'{\"provider\":\"local\"}','127.0.0.1','curl/8.5.0','2026-11-28 00:54:31'),
+(57,NULL,1,'login','user',1,'{\"provider\":\"local\"}','127.0.0.1','curl/8.5.0','2026-11-28 11:25:12'),
+(58,NULL,1,'login','user',1,'{\"provider\":\"local\"}','127.0.0.1','curl/8.5.0','2026-11-28 11:26:37'),
+(59,NULL,1,'create','transaction',203,'{\"type\":\"expense\"}','127.0.0.1','curl/8.5.0','2026-11-28 11:26:37'),
+(60,NULL,1,'create','cost_center',8,'{\"kind\":\"property\"}','127.0.0.1','curl/8.5.0','2026-11-28 11:26:53'),
+(61,NULL,1,'create','payment_method',10,'[]','127.0.0.1','curl/8.5.0','2026-11-28 11:27:01'),
+(62,NULL,1,'create','investment_type',15,'[]','127.0.0.1','curl/8.5.0','2026-11-28 11:27:01'),
+(63,NULL,1,'create','investment',11,'[]','127.0.0.1','curl/8.5.0','2026-11-28 11:27:07'),
+(64,NULL,1,'create','investment_return',11,'{\"month\":\"11\",\"year\":\"2026\"}','127.0.0.1','curl/8.5.0','2026-11-28 11:27:14'),
+(65,NULL,1,'create','account',23,'{\"account_type\":\"investment\"}','127.0.0.1','curl/8.5.0','2026-11-28 11:27:20'),
+(66,NULL,1,'login','user',1,'{\"provider\":\"local\"}','127.0.0.1','Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36','2026-11-28 11:27:48'),
+(67,NULL,1,'login','user',1,'{\"provider\":\"local\"}','127.0.0.1','Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36','2026-11-28 11:27:58'),
+(68,NULL,1,'login','user',1,'{\"provider\":\"local\"}','127.0.0.1','Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36','2026-11-28 11:28:27'),
+(69,NULL,1,'login','user',1,'{\"provider\":\"local\"}','127.0.0.1','Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36','2026-11-28 11:28:46'),
+(70,NULL,1,'login','user',1,'{\"provider\":\"local\"}','127.0.0.1','Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36','2026-11-28 11:29:00'),
+(71,NULL,1,'login','user',1,'{\"provider\":\"local\"}','127.0.0.1','Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36','2026-11-28 11:29:13'),
+(72,NULL,1,'login','user',1,'{\"provider\":\"local\"}','127.0.0.1','Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36','2026-11-28 11:29:22'),
+(73,NULL,1,'login','user',1,'{\"provider\":\"local\"}','127.0.0.1','Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36','2026-11-28 11:29:34'),
+(74,NULL,1,'login','user',1,'{\"provider\":\"local\"}','127.0.0.1','Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36','2026-11-28 11:29:43');
 /*!40000 ALTER TABLE `audit_logs` ENABLE KEYS */;
 UNLOCK TABLES;
 DROP TABLE IF EXISTS `auth_attempts`;
@@ -159,7 +207,7 @@ CREATE TABLE `auth_attempts` (
   PRIMARY KEY (`id`),
   KEY `idx_attempts_lookup` (`action`,`ip`,`email`,`created_at`),
   KEY `idx_attempts_created` (`created_at`)
-) ENGINE=InnoDB AUTO_INCREMENT=45 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=65 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 LOCK TABLES `auth_attempts` WRITE;
@@ -208,7 +256,27 @@ INSERT INTO `auth_attempts` VALUES
 (41,'127.0.0.1','admin@example.com','login',1,'2026-11-27 23:51:54'),
 (42,'127.0.0.1','admin@example.com','login',1,'2026-11-27 23:52:31'),
 (43,'127.0.0.1','admin@example.com','login',1,'2026-11-27 23:53:34'),
-(44,'127.0.0.1','admin@example.com','login',1,'2026-11-27 23:53:44');
+(44,'127.0.0.1','admin@example.com','login',1,'2026-11-27 23:53:44'),
+(45,'127.0.0.1','admin@somase.com','login',1,'2026-11-28 00:43:27'),
+(46,'127.0.0.1','admin@somase.com','login',1,'2026-11-28 00:45:00'),
+(47,'127.0.0.1','admin@somase.com','login',1,'2026-11-28 00:45:43'),
+(48,'127.0.0.1','admin@somase.com','login',1,'2026-11-28 00:46:49'),
+(49,'127.0.0.1','admin@somase.com','login',1,'2026-11-28 00:46:54'),
+(50,'127.0.0.1','admin@somase.com','login',1,'2026-11-28 00:48:02'),
+(51,'127.0.0.1','admin@somase.com','login',1,'2026-11-28 00:48:36'),
+(52,'127.0.0.1','admin@somase.com','login',1,'2026-11-28 00:53:21'),
+(53,'127.0.0.1','admin@example.com','login',1,'2026-11-28 00:54:31'),
+(54,'127.0.0.1','admin@example.com','login',1,'2026-11-28 11:25:12'),
+(55,'127.0.0.1','admin@example.com','login',1,'2026-11-28 11:26:37'),
+(56,'127.0.0.1','admin@example.com','login',1,'2026-11-28 11:27:48'),
+(57,'127.0.0.1','admin@example.com','login',1,'2026-11-28 11:27:58'),
+(58,'127.0.0.1','admin@example.com','login',1,'2026-11-28 11:28:27'),
+(59,'127.0.0.1','admin@example.com','login',1,'2026-11-28 11:28:46'),
+(60,'127.0.0.1','admin@example.com','login',1,'2026-11-28 11:29:00'),
+(61,'127.0.0.1','admin@example.com','login',1,'2026-11-28 11:29:13'),
+(62,'127.0.0.1','admin@example.com','login',1,'2026-11-28 11:29:22'),
+(63,'127.0.0.1','admin@example.com','login',1,'2026-11-28 11:29:34'),
+(64,'127.0.0.1','admin@example.com','login',1,'2026-11-28 11:29:43');
 /*!40000 ALTER TABLE `auth_attempts` ENABLE KEYS */;
 UNLOCK TABLES;
 DROP TABLE IF EXISTS `banks`;
@@ -797,6 +865,16 @@ CREATE TABLE `cost_centers` (
   `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `user_id` int(10) unsigned DEFAULT NULL,
   `name` varchar(120) NOT NULL,
+  `kind` varchar(20) NOT NULL DEFAULT 'general',
+  `address` varchar(255) DEFAULT NULL,
+  `zip_code` varchar(9) DEFAULT NULL,
+  `street` varchar(160) DEFAULT NULL,
+  `address_number` varchar(20) DEFAULT NULL,
+  `complement` varchar(80) DEFAULT NULL,
+  `neighborhood` varchar(80) DEFAULT NULL,
+  `city` varchar(80) DEFAULT NULL,
+  `state` char(2) DEFAULT NULL,
+  `identifiers` varchar(500) DEFAULT NULL,
   `code` varchar(40) DEFAULT NULL,
   `description` varchar(255) DEFAULT NULL,
   `status` enum('active','inactive') NOT NULL DEFAULT 'active',
@@ -804,18 +882,21 @@ CREATE TABLE `cost_centers` (
   `updated_at` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   PRIMARY KEY (`id`),
   KEY `idx_cost_centers_user` (`user_id`,`status`),
+  KEY `idx_cost_centers_kind` (`user_id`,`kind`),
   CONSTRAINT `fk_cost_centers_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 LOCK TABLES `cost_centers` WRITE;
 /*!40000 ALTER TABLE `cost_centers` DISABLE KEYS */;
 INSERT INTO `cost_centers` VALUES
-(1,NULL,'Pessoal','PES','Despesas e receitas pessoais','active','2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(2,NULL,'Casa','CAS','Moradia e manutenção','active','2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(3,NULL,'Empresa','EMP','Operação do negócio','active','2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(4,NULL,'Carro','CAR','Veículo e transporte','active','2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(5,NULL,'Operacional','OPE','Custos operacionais gerais','active','2026-11-27 16:31:16','2026-11-27 16:31:16');
+(1,NULL,'Pessoal','general',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,'PES','Despesas e receitas pessoais','active','2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(2,NULL,'Casa','general',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,'CAS','Moradia e manutenção','active','2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(3,NULL,'Empresa','general',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,'EMP','Operação do negócio','active','2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(4,NULL,'Carro','general',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,'CAR','Veículo e transporte','active','2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(5,NULL,'Operacional','general',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,'OPE','Custos operacionais gerais','active','2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(6,2,'Apartamento Centro','property','Rua das Flores 100',NULL,NULL,NULL,NULL,NULL,NULL,NULL,'99887766, 123456789',NULL,NULL,'active','2026-11-28 00:45:02','2026-11-28 00:45:02'),
+(8,1,'Imovel Teste CEP','property','Praça Sete de Setembro, 1000 - Sala 5 — Centro, Belo Horizonte/MG','30130-010','Praça Sete de Setembro','1000','Sala 5','Centro','Belo Horizonte','MG','11223344',NULL,NULL,'active','2026-11-28 11:26:53','2026-11-28 11:26:53');
 /*!40000 ALTER TABLE `cost_centers` ENABLE KEYS */;
 UNLOCK TABLES;
 DROP TABLE IF EXISTS `investment_movements`;
@@ -833,11 +914,13 @@ CREATE TABLE `investment_movements` (
   PRIMARY KEY (`id`),
   KEY `idx_investment_movements` (`investment_id`,`movement_date`),
   CONSTRAINT `fk_investment_movements_investment` FOREIGN KEY (`investment_id`) REFERENCES `investments` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=18 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 LOCK TABLES `investment_movements` WRITE;
 /*!40000 ALTER TABLE `investment_movements` DISABLE KEYS */;
+INSERT INTO `investment_movements` VALUES
+(17,11,'application',10000.00,'2026-11-28',110.000000,'Aplicação inicial','2026-11-28 11:27:07');
 /*!40000 ALTER TABLE `investment_movements` ENABLE KEYS */;
 UNLOCK TABLES;
 DROP TABLE IF EXISTS `investment_returns`;
@@ -858,7 +941,7 @@ CREATE TABLE `investment_returns` (
   UNIQUE KEY `uq_investment_return_period` (`investment_id`,`reference_month`,`reference_year`),
   KEY `idx_investment_returns_period` (`reference_year`,`reference_month`),
   CONSTRAINT `fk_investment_returns_investment` FOREIGN KEY (`investment_id`) REFERENCES `investments` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=17 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 LOCK TABLES `investment_returns` WRITE;
@@ -869,8 +952,50 @@ INSERT INTO `investment_returns` VALUES
 (3,1,10,2026,15000.00,133.50,0.890000,15133.50,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
 (4,2,10,2026,8000.00,71.20,0.890000,8071.20,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
 (5,1,9,2026,15000.00,139.50,0.930000,15139.50,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(6,2,9,2026,8000.00,74.40,0.930000,8074.40,'2026-11-27 16:31:16','2026-11-27 16:31:16');
+(6,2,9,2026,8000.00,74.40,0.930000,8074.40,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(16,11,11,2026,10000.00,92.74,0.927400,10092.74,'2026-11-28 11:27:14','2026-11-28 11:27:14');
 /*!40000 ALTER TABLE `investment_returns` ENABLE KEYS */;
+UNLOCK TABLES;
+DROP TABLE IF EXISTS `investment_types`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `investment_types` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `user_id` int(10) unsigned DEFAULT NULL,
+  `name` varchar(80) NOT NULL,
+  `slug` varchar(40) NOT NULL,
+  `benchmark` varchar(20) NOT NULL DEFAULT 'none',
+  `default_rate` decimal(12,6) DEFAULT NULL,
+  `default_rate_period` enum('annual','monthly') NOT NULL DEFAULT 'annual',
+  `status` enum('active','inactive') NOT NULL DEFAULT 'active',
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_investment_types_user_slug` (`user_id`,`slug`),
+  KEY `idx_investment_types_user` (`user_id`,`status`),
+  CONSTRAINT `fk_investment_types_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=16 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+LOCK TABLES `investment_types` WRITE;
+/*!40000 ALTER TABLE `investment_types` DISABLE KEYS */;
+INSERT INTO `investment_types` VALUES
+(1,NULL,'CDB','cdb','cdi',NULL,'annual','active','2026-11-28 11:18:29','2026-11-28 11:18:29'),
+(2,NULL,'LCI','lci','cdi',NULL,'annual','active','2026-11-28 11:18:29','2026-11-28 11:18:29'),
+(3,NULL,'LCA','lca','cdi',NULL,'annual','active','2026-11-28 11:18:29','2026-11-28 11:18:29'),
+(4,NULL,'Tesouro Selic','tesouro_selic','selic',NULL,'annual','active','2026-11-28 11:18:29','2026-11-28 11:18:29'),
+(5,NULL,'Tesouro IPCA+','tesouro_ipca','ipca',NULL,'annual','active','2026-11-28 11:18:29','2026-11-28 11:18:29'),
+(6,NULL,'Tesouro Prefixado','tesouro_prefixado','prefixado',NULL,'annual','active','2026-11-28 11:18:29','2026-11-28 11:18:29'),
+(7,NULL,'CDI','cdi','cdi',NULL,'annual','active','2026-11-28 11:18:29','2026-11-28 11:18:29'),
+(8,NULL,'Poupança','poupanca','none',0.500000,'monthly','active','2026-11-28 11:18:29','2026-11-28 11:18:29'),
+(9,NULL,'Fundo DI','fundo_di','cdi',NULL,'annual','active','2026-11-28 11:18:29','2026-11-28 11:18:29'),
+(10,NULL,'Ações','acoes','none',NULL,'annual','active','2026-11-28 11:18:29','2026-11-28 11:18:29'),
+(11,NULL,'ETF','etf','none',NULL,'annual','active','2026-11-28 11:18:29','2026-11-28 11:18:29'),
+(12,NULL,'Previdência','previdencia','none',NULL,'annual','active','2026-11-28 11:18:29','2026-11-28 11:18:29'),
+(13,NULL,'Cripto','cripto','none',NULL,'annual','active','2026-11-28 11:18:29','2026-11-28 11:18:29'),
+(14,NULL,'Outros','outros','none',NULL,'annual','active','2026-11-28 11:18:29','2026-11-28 11:18:29'),
+(15,1,'CDB Teste','cdb_teste','cdi',110.000000,'annual','active','2026-11-28 11:27:01','2026-11-28 11:27:01');
+/*!40000 ALTER TABLE `investment_types` ENABLE KEYS */;
 UNLOCK TABLES;
 DROP TABLE IF EXISTS `investments`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -881,11 +1006,14 @@ CREATE TABLE `investments` (
   `account_id` int(10) unsigned NOT NULL,
   `institution` varchar(120) NOT NULL,
   `investment_type` varchar(80) NOT NULL,
+  `investment_type_id` int(10) unsigned DEFAULT NULL,
   `name` varchar(150) NOT NULL,
   `amount_invested` decimal(15,2) NOT NULL DEFAULT 0.00,
   `application_date` date NOT NULL,
   `interest_rate` decimal(12,6) DEFAULT NULL,
   `rate_type` varchar(40) DEFAULT NULL,
+  `benchmark_rate` decimal(12,6) DEFAULT NULL,
+  `rate_period` varchar(10) NOT NULL DEFAULT 'annual',
   `benchmark` varchar(80) DEFAULT NULL,
   `liquidity` varchar(80) DEFAULT NULL,
   `maturity_date` date DEFAULT NULL,
@@ -896,17 +1024,55 @@ CREATE TABLE `investments` (
   PRIMARY KEY (`id`),
   KEY `idx_investments_user` (`user_id`,`status`),
   KEY `idx_investments_account` (`account_id`),
+  KEY `idx_investments_type` (`user_id`,`investment_type_id`),
   CONSTRAINT `fk_investments_account` FOREIGN KEY (`account_id`) REFERENCES `accounts` (`id`),
   CONSTRAINT `fk_investments_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 LOCK TABLES `investments` WRITE;
 /*!40000 ALTER TABLE `investments` DISABLE KEYS */;
 INSERT INTO `investments` VALUES
-(1,1,1,'XP Investimentos','cdb','CDB Liquidez Diaria',15000.00,'2026-06-27',11.500000,'annual','cdi','diaria','2028-05-27','active','SOMASE demo','2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(2,1,1,'Tesouro Direto','tesouro','Tesouro Selic 2029',8000.00,'2026-07-27',10.750000,'annual','selic','d1','2029-05-27','active','SOMASE demo','2026-11-27 16:31:16','2026-11-27 16:31:16');
+(1,1,1,'XP Investimentos','cdb',NULL,'CDB Liquidez Diaria',15000.00,'2026-06-27',11.500000,'annual',NULL,'annual','cdi','diaria','2028-05-27','active','SOMASE demo','2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(2,1,1,'Tesouro Direto','tesouro',NULL,'Tesouro Selic 2029',8000.00,'2026-07-27',10.750000,'annual',NULL,'annual','selic','d1','2029-05-27','active','SOMASE demo','2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(11,1,1,'Banco Teste','CDB Teste',15,'CDB Teste 110 CDI',10000.00,'2026-11-28',110.000000,NULL,10.650000,'annual',NULL,NULL,NULL,'active',NULL,'2026-11-28 11:27:07','2026-11-28 11:27:07');
 /*!40000 ALTER TABLE `investments` ENABLE KEYS */;
+UNLOCK TABLES;
+DROP TABLE IF EXISTS `payment_methods`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `payment_methods` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `user_id` int(10) unsigned DEFAULT NULL,
+  `name` varchar(80) NOT NULL,
+  `slug` varchar(40) NOT NULL,
+  `kind` varchar(20) NOT NULL DEFAULT 'other',
+  `icon` varchar(20) DEFAULT NULL,
+  `sort_order` int(11) NOT NULL DEFAULT 0,
+  `status` enum('active','inactive') NOT NULL DEFAULT 'active',
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_payment_methods_user_slug` (`user_id`,`slug`),
+  KEY `idx_payment_methods_user` (`user_id`,`status`,`sort_order`),
+  CONSTRAINT `fk_payment_methods_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+LOCK TABLES `payment_methods` WRITE;
+/*!40000 ALTER TABLE `payment_methods` DISABLE KEYS */;
+INSERT INTO `payment_methods` VALUES
+(1,NULL,'PIX','pix','bank',NULL,1,'active','2026-11-28 11:18:29','2026-11-28 11:18:29'),
+(2,NULL,'DÉBITO EM CONTA','debito_conta','bank',NULL,2,'active','2026-11-28 11:18:29','2026-11-28 11:18:29'),
+(3,NULL,'DÉBITO AUTOMÁTICO','debito_automatico','bank',NULL,3,'active','2026-11-28 11:18:29','2026-11-28 11:18:29'),
+(4,NULL,'CARTÃO DE DÉBITO','cartao_debito','card',NULL,4,'active','2026-11-28 11:18:29','2026-11-28 11:18:29'),
+(5,NULL,'CARTÃO DE CRÉDITO','cartao_credito','card',NULL,5,'active','2026-11-28 11:18:29','2026-11-28 11:18:29'),
+(6,NULL,'BOLETO','boleto','bank',NULL,6,'active','2026-11-28 11:18:29','2026-11-28 11:18:29'),
+(7,NULL,'DINHEIRO','dinheiro','cash',NULL,7,'active','2026-11-28 11:18:29','2026-11-28 11:18:29'),
+(8,NULL,'TRANSFERÊNCIA','transferencia','transfer',NULL,8,'active','2026-11-28 11:18:29','2026-11-28 11:18:29'),
+(9,NULL,'OUTRO','outro','other',NULL,9,'active','2026-11-28 11:18:29','2026-11-28 11:18:29'),
+(10,1,'DEBITO EM CONTA PJ','debito_em_conta_pj','bank',NULL,10,'active','2026-11-28 11:27:01','2026-11-28 11:27:01');
+/*!40000 ALTER TABLE `payment_methods` ENABLE KEYS */;
 UNLOCK TABLES;
 DROP TABLE IF EXISTS `permissions`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -962,7 +1128,7 @@ CREATE TABLE `recurring_transactions` (
   CONSTRAINT `fk_recurring_category` FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`) ON DELETE SET NULL,
   CONSTRAINT `fk_recurring_cost_center` FOREIGN KEY (`cost_center_id`) REFERENCES `cost_centers` (`id`) ON DELETE SET NULL,
   CONSTRAINT `fk_recurring_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 LOCK TABLES `recurring_transactions` WRITE;
@@ -1052,6 +1218,9 @@ CREATE TABLE `transactions` (
   `status` enum('pending','paid','overdue','cancelled','expected','received','late') NOT NULL DEFAULT 'pending',
   `payment_method` varchar(40) DEFAULT NULL,
   `notes` text DEFAULT NULL,
+  `document_code` varchar(64) DEFAULT NULL,
+  `import_ref` varchar(100) DEFAULT NULL,
+  `attachment_path` varchar(255) DEFAULT NULL,
   `recurrence_id` int(10) unsigned DEFAULT NULL,
   `recurrence_key` varchar(80) DEFAULT NULL,
   `transfer_id` char(36) DEFAULT NULL,
@@ -1066,118 +1235,125 @@ CREATE TABLE `transactions` (
   KEY `idx_transactions_cost_center` (`cost_center_id`),
   KEY `idx_transactions_recurrence` (`recurrence_id`,`transaction_date`),
   KEY `idx_transactions_transfer` (`transfer_id`),
+  KEY `idx_transactions_document` (`user_id`,`document_code`),
+  KEY `idx_transactions_import` (`user_id`,`account_id`,`import_ref`),
   CONSTRAINT `fk_transactions_account` FOREIGN KEY (`account_id`) REFERENCES `accounts` (`id`),
   CONSTRAINT `fk_transactions_category` FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`) ON DELETE SET NULL,
   CONSTRAINT `fk_transactions_cost_center` FOREIGN KEY (`cost_center_id`) REFERENCES `cost_centers` (`id`) ON DELETE SET NULL,
   CONSTRAINT `fk_transactions_recurrence` FOREIGN KEY (`recurrence_id`) REFERENCES `recurring_transactions` (`id`) ON DELETE SET NULL,
   CONSTRAINT `fk_transactions_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=175 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=204 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 LOCK TABLES `transactions` WRITE;
 /*!40000 ALTER TABLE `transactions` DISABLE KEYS */;
 INSERT INTO `transactions` VALUES
-(1,1,1,2,NULL,'expense','Supermercado do mes',720.00,'2026-11-08','2026-11-13','2026-11-08','paid','pix','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(2,1,1,3,NULL,'expense','Aluguel',2400.00,'2026-11-05','2026-11-10',NULL,'pending','boleto','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(3,1,1,3,NULL,'expense','Energia eletrica',215.00,'2026-11-15','2026-11-20','2026-11-15','paid','debit','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(4,1,1,7,NULL,'expense','Assinaturas digitais',89.90,'2026-11-20','2026-11-25','2026-11-20','paid','credit','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(5,1,1,4,NULL,'expense','Combustivel',380.00,'2026-11-22','2026-11-27','2026-11-22','paid','debit','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(6,1,1,5,NULL,'expense','Plano de saude',640.00,'2026-11-12','2026-11-17','2026-11-12','paid','boleto','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(7,1,1,11,NULL,'income','Salario mensal',7800.00,'2026-11-05','2026-11-10','2026-11-05','received','transfer','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(8,1,1,13,NULL,'income','Projeto freelance',1350.00,'2026-11-18','2026-11-23','2026-11-18','received','pix','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(9,1,1,2,NULL,'expense','Supermercado do mes',752.00,'2026-10-08','2026-10-13','2026-10-08','paid','pix','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(10,1,1,3,NULL,'expense','Aluguel',2400.00,'2026-10-05','2026-10-10',NULL,'paid','boleto','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(11,1,1,3,NULL,'expense','Energia eletrica',227.00,'2026-10-15','2026-10-20','2026-10-15','paid','debit','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(12,1,1,7,NULL,'expense','Assinaturas digitais',89.90,'2026-10-20','2026-10-25','2026-10-20','paid','credit','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(13,1,1,4,NULL,'expense','Combustivel',406.00,'2026-10-22','2026-10-27','2026-10-22','paid','debit','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(14,1,1,5,NULL,'expense','Plano de saude',640.00,'2026-10-12','2026-10-17','2026-10-12','paid','boleto','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(15,1,1,11,NULL,'income','Salario mensal',7920.00,'2026-10-05','2026-10-10','2026-10-05','received','transfer','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(16,1,1,13,NULL,'income','Projeto freelance',1530.00,'2026-10-18','2026-10-23','2026-10-18','received','pix','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(17,1,1,2,NULL,'expense','Supermercado do mes',784.00,'2026-09-08','2026-09-13','2026-09-08','paid','pix','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(18,1,1,3,NULL,'expense','Aluguel',2400.00,'2026-09-05','2026-09-10',NULL,'paid','boleto','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(19,1,1,3,NULL,'expense','Energia eletrica',239.00,'2026-09-15','2026-09-20','2026-09-15','paid','debit','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(20,1,1,7,NULL,'expense','Assinaturas digitais',89.90,'2026-09-20','2026-09-25','2026-09-20','paid','credit','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(21,1,1,4,NULL,'expense','Combustivel',432.00,'2026-09-22','2026-09-27','2026-09-22','paid','debit','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(22,1,1,5,NULL,'expense','Plano de saude',640.00,'2026-09-12','2026-09-17','2026-09-12','paid','boleto','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(23,1,1,11,NULL,'income','Salario mensal',8040.00,'2026-09-05','2026-09-10','2026-09-05','received','transfer','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(24,1,1,13,NULL,'income','Projeto freelance',1710.00,'2026-09-18','2026-09-23','2026-09-18','received','pix','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(25,1,1,2,NULL,'expense','Supermercado do mes',816.00,'2026-08-08','2026-08-13','2026-08-08','paid','pix','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(26,1,1,3,NULL,'expense','Aluguel',2400.00,'2026-08-05','2026-08-10',NULL,'paid','boleto','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(27,1,1,3,NULL,'expense','Energia eletrica',251.00,'2026-08-15','2026-08-20','2026-08-15','paid','debit','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(28,1,1,7,NULL,'expense','Assinaturas digitais',89.90,'2026-08-20','2026-08-25','2026-08-20','paid','credit','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(29,1,1,4,NULL,'expense','Combustivel',458.00,'2026-08-22','2026-08-27','2026-08-22','paid','debit','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(30,1,1,5,NULL,'expense','Plano de saude',640.00,'2026-08-12','2026-08-17','2026-08-12','paid','boleto','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(31,1,1,11,NULL,'income','Salario mensal',8160.00,'2026-08-05','2026-08-10','2026-08-05','received','transfer','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(32,1,1,13,NULL,'income','Projeto freelance',1890.00,'2026-08-18','2026-08-23','2026-08-18','received','pix','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(33,1,1,2,NULL,'expense','Supermercado do mes',848.00,'2026-07-08','2026-07-13','2026-07-08','paid','pix','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(34,1,1,3,NULL,'expense','Aluguel',2400.00,'2026-07-05','2026-07-10',NULL,'paid','boleto','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(35,1,1,3,NULL,'expense','Energia eletrica',263.00,'2026-07-15','2026-07-20','2026-07-15','paid','debit','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(36,1,1,7,NULL,'expense','Assinaturas digitais',89.90,'2026-07-20','2026-07-25','2026-07-20','paid','credit','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(37,1,1,4,NULL,'expense','Combustivel',484.00,'2026-07-22','2026-07-27','2026-07-22','paid','debit','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(38,1,1,5,NULL,'expense','Plano de saude',640.00,'2026-07-12','2026-07-17','2026-07-12','paid','boleto','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(39,1,1,11,NULL,'income','Salario mensal',8280.00,'2026-07-05','2026-07-10','2026-07-05','received','transfer','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(40,1,1,13,NULL,'income','Projeto freelance',2070.00,'2026-07-18','2026-07-23','2026-07-18','received','pix','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(41,1,1,2,NULL,'expense','Supermercado do mes',880.00,'2026-06-08','2026-06-13','2026-06-08','paid','pix','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(42,1,1,3,NULL,'expense','Aluguel',2400.00,'2026-06-05','2026-06-10',NULL,'paid','boleto','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(43,1,1,3,NULL,'expense','Energia eletrica',275.00,'2026-06-15','2026-06-20','2026-06-15','paid','debit','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(44,1,1,7,NULL,'expense','Assinaturas digitais',89.90,'2026-06-20','2026-06-25','2026-06-20','paid','credit','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(45,1,1,4,NULL,'expense','Combustivel',510.00,'2026-06-22','2026-06-27','2026-06-22','paid','debit','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(46,1,1,5,NULL,'expense','Plano de saude',640.00,'2026-06-12','2026-06-17','2026-06-12','paid','boleto','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(47,1,1,11,NULL,'income','Salario mensal',8400.00,'2026-06-05','2026-06-10','2026-06-05','received','transfer','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(48,1,1,13,NULL,'income','Projeto freelance',2250.00,'2026-06-18','2026-06-23','2026-06-18','received','pix','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(49,1,1,2,NULL,'expense','Supermercado do mes',912.00,'2026-05-08','2026-05-13','2026-05-08','paid','pix','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(50,1,1,3,NULL,'expense','Aluguel',2400.00,'2026-05-05','2026-05-10',NULL,'paid','boleto','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(51,1,1,3,NULL,'expense','Energia eletrica',287.00,'2026-05-15','2026-05-20','2026-05-15','paid','debit','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(52,1,1,7,NULL,'expense','Assinaturas digitais',89.90,'2026-05-20','2026-05-25','2026-05-20','paid','credit','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(53,1,1,4,NULL,'expense','Combustivel',536.00,'2026-05-22','2026-05-27','2026-05-22','paid','debit','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(54,1,1,5,NULL,'expense','Plano de saude',640.00,'2026-05-12','2026-05-17','2026-05-12','paid','boleto','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(55,1,1,11,NULL,'income','Salario mensal',8520.00,'2026-05-05','2026-05-10','2026-05-05','received','transfer','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(56,1,1,13,NULL,'income','Projeto freelance',2430.00,'2026-05-18','2026-05-23','2026-05-18','received','pix','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(57,1,1,2,NULL,'expense','Supermercado do mes',944.00,'2026-04-08','2026-04-13','2026-04-08','paid','pix','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(58,1,1,3,NULL,'expense','Aluguel',2400.00,'2026-04-05','2026-04-10',NULL,'paid','boleto','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(59,1,1,3,NULL,'expense','Energia eletrica',299.00,'2026-04-15','2026-04-20','2026-04-15','paid','debit','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(60,1,1,7,NULL,'expense','Assinaturas digitais',89.90,'2026-04-20','2026-04-25','2026-04-20','paid','credit','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(61,1,1,4,NULL,'expense','Combustivel',562.00,'2026-04-22','2026-04-27','2026-04-22','paid','debit','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(62,1,1,5,NULL,'expense','Plano de saude',640.00,'2026-04-12','2026-04-17','2026-04-12','paid','boleto','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(63,1,1,11,NULL,'income','Salario mensal',8640.00,'2026-04-05','2026-04-10','2026-04-05','received','transfer','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(64,1,1,13,NULL,'income','Projeto freelance',2610.00,'2026-04-18','2026-04-23','2026-04-18','received','pix','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(65,1,1,2,NULL,'expense','Supermercado do mes',976.00,'2026-03-08','2026-03-13','2026-03-08','paid','pix','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(66,1,1,3,NULL,'expense','Aluguel',2400.00,'2026-03-05','2026-03-10',NULL,'paid','boleto','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(67,1,1,3,NULL,'expense','Energia eletrica',311.00,'2026-03-15','2026-03-20','2026-03-15','paid','debit','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(68,1,1,7,NULL,'expense','Assinaturas digitais',89.90,'2026-03-20','2026-03-25','2026-03-20','paid','credit','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(69,1,1,4,NULL,'expense','Combustivel',588.00,'2026-03-22','2026-03-27','2026-03-22','paid','debit','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(70,1,1,5,NULL,'expense','Plano de saude',640.00,'2026-03-12','2026-03-17','2026-03-12','paid','boleto','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(71,1,1,11,NULL,'income','Salario mensal',8760.00,'2026-03-05','2026-03-10','2026-03-05','received','transfer','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(72,1,1,13,NULL,'income','Projeto freelance',2790.00,'2026-03-18','2026-03-23','2026-03-18','received','pix','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(73,1,1,2,NULL,'expense','Supermercado do mes',1008.00,'2026-02-08','2026-02-13','2026-02-08','paid','pix','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(74,1,1,3,NULL,'expense','Aluguel',2400.00,'2026-02-05','2026-02-10',NULL,'paid','boleto','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(75,1,1,3,NULL,'expense','Energia eletrica',323.00,'2026-02-15','2026-02-20','2026-02-15','paid','debit','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(76,1,1,7,NULL,'expense','Assinaturas digitais',89.90,'2026-02-20','2026-02-25','2026-02-20','paid','credit','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(77,1,1,4,NULL,'expense','Combustivel',614.00,'2026-02-22','2026-02-27','2026-02-22','paid','debit','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(78,1,1,5,NULL,'expense','Plano de saude',640.00,'2026-02-12','2026-02-17','2026-02-12','paid','boleto','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(79,1,1,11,NULL,'income','Salario mensal',8880.00,'2026-02-05','2026-02-10','2026-02-05','received','transfer','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(80,1,1,13,NULL,'income','Projeto freelance',2970.00,'2026-02-18','2026-02-23','2026-02-18','received','pix','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(81,1,1,2,NULL,'expense','Supermercado do mes',1040.00,'2026-01-08','2026-01-13','2026-01-08','paid','pix','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(82,1,1,3,NULL,'expense','Aluguel',2400.00,'2026-01-05','2026-01-10',NULL,'paid','boleto','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(83,1,1,3,NULL,'expense','Energia eletrica',335.00,'2026-01-15','2026-01-20','2026-01-15','paid','debit','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(84,1,1,7,NULL,'expense','Assinaturas digitais',89.90,'2026-01-20','2026-01-25','2026-01-20','paid','credit','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(85,1,1,4,NULL,'expense','Combustivel',640.00,'2026-01-22','2026-01-27','2026-01-22','paid','debit','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(86,1,1,5,NULL,'expense','Plano de saude',640.00,'2026-01-12','2026-01-17','2026-01-12','paid','boleto','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(87,1,1,11,NULL,'income','Salario mensal',9000.00,'2026-01-05','2026-01-10','2026-01-05','received','transfer','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(88,1,1,13,NULL,'income','Projeto freelance',3150.00,'2026-01-18','2026-01-23','2026-01-18','received','pix','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(89,1,1,2,NULL,'expense','Supermercado do mes',1072.00,'2025-12-08','2025-12-13','2025-12-08','paid','pix','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(90,1,1,3,NULL,'expense','Aluguel',2400.00,'2025-12-05','2025-12-10',NULL,'paid','boleto','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(91,1,1,3,NULL,'expense','Energia eletrica',347.00,'2025-12-15','2025-12-20','2025-12-15','paid','debit','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(92,1,1,7,NULL,'expense','Assinaturas digitais',89.90,'2025-12-20','2025-12-25','2025-12-20','paid','credit','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(93,1,1,4,NULL,'expense','Combustivel',666.00,'2025-12-22','2025-12-27','2025-12-22','paid','debit','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(94,1,1,5,NULL,'expense','Plano de saude',640.00,'2025-12-12','2025-12-17','2025-12-12','paid','boleto','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(95,1,1,11,NULL,'income','Salario mensal',9120.00,'2025-12-05','2025-12-10','2025-12-05','received','transfer','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(96,1,1,13,NULL,'income','Projeto freelance',3330.00,'2025-12-18','2025-12-23','2025-12-18','received','pix','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(128,1,1,3,NULL,'expense','Aluguel do proximo mes',2400.00,'2026-11-27','2026-12-03',NULL,'pending','boleto','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(129,1,1,10,NULL,'expense','Fatura do cartao',1380.45,'2026-11-27','2026-12-09',NULL,'pending','credit','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(130,1,1,5,NULL,'expense','Plano de saude',640.00,'2026-11-27','2026-12-15',NULL,'pending','boleto','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(131,1,1,13,NULL,'income','Projeto freelance (2a parcela)',1350.00,'2026-11-27','2026-12-18',NULL,'expected','pix','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
-(132,1,1,7,NULL,'expense','Assinaturas digitais',89.90,'2026-11-27','2026-12-22',NULL,'pending','credit','SOMASE demo',NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16');
+(1,1,1,2,NULL,'expense','Supermercado do mes',720.00,'2026-11-08','2026-11-13','2026-11-08','paid','pix','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(2,1,1,3,NULL,'expense','Aluguel',2400.00,'2026-11-05','2026-11-10',NULL,'pending','boleto','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(3,1,1,3,NULL,'expense','Energia eletrica',215.00,'2026-11-15','2026-11-20','2026-11-15','paid','debit','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(4,1,1,7,NULL,'expense','Assinaturas digitais',89.90,'2026-11-20','2026-11-25','2026-11-20','paid','credit','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(5,1,1,4,NULL,'expense','Combustivel',380.00,'2026-11-22','2026-11-27','2026-11-22','paid','debit','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(6,1,1,5,NULL,'expense','Plano de saude',640.00,'2026-11-12','2026-11-17','2026-11-12','paid','boleto','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(7,1,1,11,NULL,'income','Salario mensal',7800.00,'2026-11-05','2026-11-10','2026-11-05','received','transfer','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(8,1,1,13,NULL,'income','Projeto freelance',1350.00,'2026-11-18','2026-11-23','2026-11-18','received','pix','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(9,1,1,2,NULL,'expense','Supermercado do mes',752.00,'2026-10-08','2026-10-13','2026-10-08','paid','pix','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(10,1,1,3,NULL,'expense','Aluguel',2400.00,'2026-10-05','2026-10-10',NULL,'paid','boleto','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(11,1,1,3,NULL,'expense','Energia eletrica',227.00,'2026-10-15','2026-10-20','2026-10-15','paid','debit','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(12,1,1,7,NULL,'expense','Assinaturas digitais',89.90,'2026-10-20','2026-10-25','2026-10-20','paid','credit','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(13,1,1,4,NULL,'expense','Combustivel',406.00,'2026-10-22','2026-10-27','2026-10-22','paid','debit','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(14,1,1,5,NULL,'expense','Plano de saude',640.00,'2026-10-12','2026-10-17','2026-10-12','paid','boleto','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(15,1,1,11,NULL,'income','Salario mensal',7920.00,'2026-10-05','2026-10-10','2026-10-05','received','transfer','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(16,1,1,13,NULL,'income','Projeto freelance',1530.00,'2026-10-18','2026-10-23','2026-10-18','received','pix','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(17,1,1,2,NULL,'expense','Supermercado do mes',784.00,'2026-09-08','2026-09-13','2026-09-08','paid','pix','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(18,1,1,3,NULL,'expense','Aluguel',2400.00,'2026-09-05','2026-09-10',NULL,'paid','boleto','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(19,1,1,3,NULL,'expense','Energia eletrica',239.00,'2026-09-15','2026-09-20','2026-09-15','paid','debit','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(20,1,1,7,NULL,'expense','Assinaturas digitais',89.90,'2026-09-20','2026-09-25','2026-09-20','paid','credit','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(21,1,1,4,NULL,'expense','Combustivel',432.00,'2026-09-22','2026-09-27','2026-09-22','paid','debit','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(22,1,1,5,NULL,'expense','Plano de saude',640.00,'2026-09-12','2026-09-17','2026-09-12','paid','boleto','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(23,1,1,11,NULL,'income','Salario mensal',8040.00,'2026-09-05','2026-09-10','2026-09-05','received','transfer','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(24,1,1,13,NULL,'income','Projeto freelance',1710.00,'2026-09-18','2026-09-23','2026-09-18','received','pix','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(25,1,1,2,NULL,'expense','Supermercado do mes',816.00,'2026-08-08','2026-08-13','2026-08-08','paid','pix','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(26,1,1,3,NULL,'expense','Aluguel',2400.00,'2026-08-05','2026-08-10',NULL,'paid','boleto','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(27,1,1,3,NULL,'expense','Energia eletrica',251.00,'2026-08-15','2026-08-20','2026-08-15','paid','debit','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(28,1,1,7,NULL,'expense','Assinaturas digitais',89.90,'2026-08-20','2026-08-25','2026-08-20','paid','credit','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(29,1,1,4,NULL,'expense','Combustivel',458.00,'2026-08-22','2026-08-27','2026-08-22','paid','debit','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(30,1,1,5,NULL,'expense','Plano de saude',640.00,'2026-08-12','2026-08-17','2026-08-12','paid','boleto','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(31,1,1,11,NULL,'income','Salario mensal',8160.00,'2026-08-05','2026-08-10','2026-08-05','received','transfer','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(32,1,1,13,NULL,'income','Projeto freelance',1890.00,'2026-08-18','2026-08-23','2026-08-18','received','pix','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(33,1,1,2,NULL,'expense','Supermercado do mes',848.00,'2026-07-08','2026-07-13','2026-07-08','paid','pix','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(34,1,1,3,NULL,'expense','Aluguel',2400.00,'2026-07-05','2026-07-10',NULL,'paid','boleto','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(35,1,1,3,NULL,'expense','Energia eletrica',263.00,'2026-07-15','2026-07-20','2026-07-15','paid','debit','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(36,1,1,7,NULL,'expense','Assinaturas digitais',89.90,'2026-07-20','2026-07-25','2026-07-20','paid','credit','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(37,1,1,4,NULL,'expense','Combustivel',484.00,'2026-07-22','2026-07-27','2026-07-22','paid','debit','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(38,1,1,5,NULL,'expense','Plano de saude',640.00,'2026-07-12','2026-07-17','2026-07-12','paid','boleto','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(39,1,1,11,NULL,'income','Salario mensal',8280.00,'2026-07-05','2026-07-10','2026-07-05','received','transfer','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(40,1,1,13,NULL,'income','Projeto freelance',2070.00,'2026-07-18','2026-07-23','2026-07-18','received','pix','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(41,1,1,2,NULL,'expense','Supermercado do mes',880.00,'2026-06-08','2026-06-13','2026-06-08','paid','pix','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(42,1,1,3,NULL,'expense','Aluguel',2400.00,'2026-06-05','2026-06-10',NULL,'paid','boleto','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(43,1,1,3,NULL,'expense','Energia eletrica',275.00,'2026-06-15','2026-06-20','2026-06-15','paid','debit','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(44,1,1,7,NULL,'expense','Assinaturas digitais',89.90,'2026-06-20','2026-06-25','2026-06-20','paid','credit','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(45,1,1,4,NULL,'expense','Combustivel',510.00,'2026-06-22','2026-06-27','2026-06-22','paid','debit','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(46,1,1,5,NULL,'expense','Plano de saude',640.00,'2026-06-12','2026-06-17','2026-06-12','paid','boleto','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(47,1,1,11,NULL,'income','Salario mensal',8400.00,'2026-06-05','2026-06-10','2026-06-05','received','transfer','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(48,1,1,13,NULL,'income','Projeto freelance',2250.00,'2026-06-18','2026-06-23','2026-06-18','received','pix','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(49,1,1,2,NULL,'expense','Supermercado do mes',912.00,'2026-05-08','2026-05-13','2026-05-08','paid','pix','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(50,1,1,3,NULL,'expense','Aluguel',2400.00,'2026-05-05','2026-05-10',NULL,'paid','boleto','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(51,1,1,3,NULL,'expense','Energia eletrica',287.00,'2026-05-15','2026-05-20','2026-05-15','paid','debit','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(52,1,1,7,NULL,'expense','Assinaturas digitais',89.90,'2026-05-20','2026-05-25','2026-05-20','paid','credit','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(53,1,1,4,NULL,'expense','Combustivel',536.00,'2026-05-22','2026-05-27','2026-05-22','paid','debit','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(54,1,1,5,NULL,'expense','Plano de saude',640.00,'2026-05-12','2026-05-17','2026-05-12','paid','boleto','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(55,1,1,11,NULL,'income','Salario mensal',8520.00,'2026-05-05','2026-05-10','2026-05-05','received','transfer','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(56,1,1,13,NULL,'income','Projeto freelance',2430.00,'2026-05-18','2026-05-23','2026-05-18','received','pix','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(57,1,1,2,NULL,'expense','Supermercado do mes',944.00,'2026-04-08','2026-04-13','2026-04-08','paid','pix','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(58,1,1,3,NULL,'expense','Aluguel',2400.00,'2026-04-05','2026-04-10',NULL,'paid','boleto','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(59,1,1,3,NULL,'expense','Energia eletrica',299.00,'2026-04-15','2026-04-20','2026-04-15','paid','debit','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(60,1,1,7,NULL,'expense','Assinaturas digitais',89.90,'2026-04-20','2026-04-25','2026-04-20','paid','credit','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(61,1,1,4,NULL,'expense','Combustivel',562.00,'2026-04-22','2026-04-27','2026-04-22','paid','debit','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(62,1,1,5,NULL,'expense','Plano de saude',640.00,'2026-04-12','2026-04-17','2026-04-12','paid','boleto','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(63,1,1,11,NULL,'income','Salario mensal',8640.00,'2026-04-05','2026-04-10','2026-04-05','received','transfer','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(64,1,1,13,NULL,'income','Projeto freelance',2610.00,'2026-04-18','2026-04-23','2026-04-18','received','pix','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(65,1,1,2,NULL,'expense','Supermercado do mes',976.00,'2026-03-08','2026-03-13','2026-03-08','paid','pix','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(66,1,1,3,NULL,'expense','Aluguel',2400.00,'2026-03-05','2026-03-10',NULL,'paid','boleto','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(67,1,1,3,NULL,'expense','Energia eletrica',311.00,'2026-03-15','2026-03-20','2026-03-15','paid','debit','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(68,1,1,7,NULL,'expense','Assinaturas digitais',89.90,'2026-03-20','2026-03-25','2026-03-20','paid','credit','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(69,1,1,4,NULL,'expense','Combustivel',588.00,'2026-03-22','2026-03-27','2026-03-22','paid','debit','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(70,1,1,5,NULL,'expense','Plano de saude',640.00,'2026-03-12','2026-03-17','2026-03-12','paid','boleto','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(71,1,1,11,NULL,'income','Salario mensal',8760.00,'2026-03-05','2026-03-10','2026-03-05','received','transfer','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(72,1,1,13,NULL,'income','Projeto freelance',2790.00,'2026-03-18','2026-03-23','2026-03-18','received','pix','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(73,1,1,2,NULL,'expense','Supermercado do mes',1008.00,'2026-02-08','2026-02-13','2026-02-08','paid','pix','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(74,1,1,3,NULL,'expense','Aluguel',2400.00,'2026-02-05','2026-02-10',NULL,'paid','boleto','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(75,1,1,3,NULL,'expense','Energia eletrica',323.00,'2026-02-15','2026-02-20','2026-02-15','paid','debit','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(76,1,1,7,NULL,'expense','Assinaturas digitais',89.90,'2026-02-20','2026-02-25','2026-02-20','paid','credit','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(77,1,1,4,NULL,'expense','Combustivel',614.00,'2026-02-22','2026-02-27','2026-02-22','paid','debit','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(78,1,1,5,NULL,'expense','Plano de saude',640.00,'2026-02-12','2026-02-17','2026-02-12','paid','boleto','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(79,1,1,11,NULL,'income','Salario mensal',8880.00,'2026-02-05','2026-02-10','2026-02-05','received','transfer','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(80,1,1,13,NULL,'income','Projeto freelance',2970.00,'2026-02-18','2026-02-23','2026-02-18','received','pix','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(81,1,1,2,NULL,'expense','Supermercado do mes',1040.00,'2026-01-08','2026-01-13','2026-01-08','paid','pix','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(82,1,1,3,NULL,'expense','Aluguel',2400.00,'2026-01-05','2026-01-10',NULL,'paid','boleto','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(83,1,1,3,NULL,'expense','Energia eletrica',335.00,'2026-01-15','2026-01-20','2026-01-15','paid','debit','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(84,1,1,7,NULL,'expense','Assinaturas digitais',89.90,'2026-01-20','2026-01-25','2026-01-20','paid','credit','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(85,1,1,4,NULL,'expense','Combustivel',640.00,'2026-01-22','2026-01-27','2026-01-22','paid','debit','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(86,1,1,5,NULL,'expense','Plano de saude',640.00,'2026-01-12','2026-01-17','2026-01-12','paid','boleto','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(87,1,1,11,NULL,'income','Salario mensal',9000.00,'2026-01-05','2026-01-10','2026-01-05','received','transfer','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(88,1,1,13,NULL,'income','Projeto freelance',3150.00,'2026-01-18','2026-01-23','2026-01-18','received','pix','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(89,1,1,2,NULL,'expense','Supermercado do mes',1072.00,'2025-12-08','2025-12-13','2025-12-08','paid','pix','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(90,1,1,3,NULL,'expense','Aluguel',2400.00,'2025-12-05','2025-12-10',NULL,'paid','boleto','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(91,1,1,3,NULL,'expense','Energia eletrica',347.00,'2025-12-15','2025-12-20','2025-12-15','paid','debit','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(92,1,1,7,NULL,'expense','Assinaturas digitais',89.90,'2025-12-20','2025-12-25','2025-12-20','paid','credit','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(93,1,1,4,NULL,'expense','Combustivel',666.00,'2025-12-22','2025-12-27','2025-12-22','paid','debit','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(94,1,1,5,NULL,'expense','Plano de saude',640.00,'2025-12-12','2025-12-17','2025-12-12','paid','boleto','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(95,1,1,11,NULL,'income','Salario mensal',9120.00,'2025-12-05','2025-12-10','2025-12-05','received','transfer','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(96,1,1,13,NULL,'income','Projeto freelance',3330.00,'2025-12-18','2025-12-23','2025-12-18','received','pix','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(128,1,1,3,NULL,'expense','Aluguel do proximo mes',2400.00,'2026-11-27','2026-12-03',NULL,'pending','boleto','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(129,1,1,10,NULL,'expense','Fatura do cartao',1380.45,'2026-11-27','2026-12-09',NULL,'pending','credit','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(130,1,1,5,NULL,'expense','Plano de saude',640.00,'2026-11-27','2026-12-15',NULL,'pending','boleto','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(131,1,1,13,NULL,'income','Projeto freelance (2a parcela)',1350.00,'2026-11-27','2026-12-18',NULL,'expected','pix','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(132,1,1,7,NULL,'expense','Assinaturas digitais',89.90,'2026-11-27','2026-12-22',NULL,'pending','credit','SOMASE demo',NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-27 16:31:16','2026-11-27 16:31:16'),
+(183,2,18,NULL,NULL,'expense','Conta de luz - ENEL',195.79,'2026-11-05','2026-11-05','2026-11-05','paid','transfer','Importado de extrato em 27/11/2026 21:46',NULL,'csv:e691a809bef9bca2ea961d27c80455783b66cbb2',NULL,NULL,NULL,NULL,'2026-11-28 00:46:53','2026-11-28 00:46:53'),
+(184,2,18,NULL,NULL,'income','PIX recebido cliente ABC',2500.00,'2026-11-10','2026-11-10','2026-11-10','received','transfer','Importado de extrato em 27/11/2026 21:46',NULL,'csv:52916331a37041fe1e18a12008c2ef124a28b525',NULL,NULL,NULL,NULL,'2026-11-28 00:46:53','2026-11-28 00:46:53'),
+(185,2,18,NULL,NULL,'expense','Teste anexo protegido',10.50,'2026-11-27',NULL,NULL,'paid',NULL,NULL,NULL,NULL,'u2/2026/11/dc246a97821d700a3bcb4020.pdf',NULL,NULL,NULL,'2026-11-28 00:48:03','2026-11-28 00:48:03'),
+(186,2,18,NULL,NULL,'expense','Teste anexo protegido',10.50,'2026-11-27',NULL,NULL,'paid',NULL,NULL,NULL,NULL,'u2/2026/11/b9bb855f2fe4eff0bb247d04.pdf',NULL,NULL,NULL,'2026-11-28 00:48:37','2026-11-28 00:48:37'),
+(203,1,1,NULL,NULL,'expense','CONTA DE TESTE MINUSCULA',123.45,'2026-11-28',NULL,NULL,'paid','debito_conta',NULL,NULL,NULL,NULL,NULL,NULL,NULL,'2026-11-28 11:26:37','2026-11-28 11:26:37');
 /*!40000 ALTER TABLE `transactions` ENABLE KEYS */;
 UNLOCK TABLES;
 DROP TABLE IF EXISTS `user_identities`;
@@ -1260,8 +1436,8 @@ CREATE TABLE `users` (
 LOCK TABLES `users` WRITE;
 /*!40000 ALTER TABLE `users` DISABLE KEYS */;
 INSERT INTO `users` VALUES
-(1,'Administrador','admin@example.com','$2b$10$vWAdPPDyhPW0u/UeSpdf1eLsXidEiwemycK/I9x7I1DcVjCLSTJii',1,'active',NULL,'local',NULL,NULL,NULL,NULL,'2026-11-27 23:53:44','2026-11-27 16:31:16','2026-11-27 23:53:44'),
-(2,'Administrador SOMASE','admin@somase.com','$2y$10$CLh5deExaEM80yzUleFVs.HBUfoLoeXRKr3TU4ACciq6a92wFoj/C',1,'active','1985-03-12','local',NULL,'2026-11-27 19:36:04','2026-11-27 19:47:49',NULL,'2026-11-27 21:48:00','2026-11-27 19:36:04','2026-11-27 21:48:00'),
+(1,'Administrador','admin@example.com','$2b$10$vWAdPPDyhPW0u/UeSpdf1eLsXidEiwemycK/I9x7I1DcVjCLSTJii',1,'active',NULL,'local',NULL,NULL,NULL,NULL,'2026-11-28 11:29:43','2026-11-27 16:31:16','2026-11-28 11:29:43'),
+(2,'Administrador SOMASE','admin@somase.com','$2y$10$CLh5deExaEM80yzUleFVs.HBUfoLoeXRKr3TU4ACciq6a92wFoj/C',1,'active','1985-03-12','local',NULL,'2026-11-27 19:36:04','2026-11-27 19:47:49',NULL,'2026-11-28 00:53:21','2026-11-27 19:36:04','2026-11-28 00:53:21'),
 (3,'Maria Oliveira Souza','maria.teste@example.com','$2y$10$XfOy0Vu5/hp6noKYQRtnJ.A/o21Jl4j8XRsOoYlIgrjgnTZW5Wy4S',3,'active','1992-07-15','local',NULL,NULL,'2026-11-27 19:45:29','127.0.0.1','2026-11-27 19:45:50','2026-11-27 19:45:29','2026-11-27 19:46:16'),
 (4,'Lucas Ferreira','lucas.oauth@example.com','$2y$10$UU7wwHE6Lk7YpQuTmk2nLeIv/Srqc.1G/G34.KIzinlCmBYRq7uWS',3,'active','1995-04-02','google',NULL,'2026-11-27 19:46:59','2026-11-27 19:53:45',NULL,'2026-11-27 19:55:14','2026-11-27 19:46:59','2026-11-27 19:55:14');
 /*!40000 ALTER TABLE `users` ENABLE KEYS */;

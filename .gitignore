@@ -9,3 +9,6 @@
 .DS_Store
 .idea/
 .vscode/
+
+# Cache de consultas externas (CEP) — gerado em tempo de execucao
+storage/cache/
