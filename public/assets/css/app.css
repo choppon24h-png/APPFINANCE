@@ -1376,3 +1376,69 @@ body.auth-body {
 }
 .transaction-center { display: block; font-size: 10.5px; color: var(--muted); margin-top: 1px; }
 .attach-link { margin-left: 6px; font-size: 13px; text-decoration: none; }
+
+/* ---------- menu com subitens (28/11/2026) ---------- */
+.nav-item.nav-sub { padding-left: 26px; font-size: 12px; color: var(--muted); }
+.nav-item.nav-sub .nav-icon { width: 14px; height: 14px; opacity: .7; }
+.nav-item.nav-sub.active { color: #fff; }
+
+/* ---------- mini dashboard de lancamentos ---------- */
+.mini-dashboard { display: grid; gap: 10px; grid-template-columns: repeat(5, minmax(0, 1fr)); margin-bottom: 14px; }
+.mini-card { border: 1px solid var(--line); border-radius: 14px; padding: 12px 13px; background: rgba(255, 255, 255, .03); display: grid; gap: 4px; min-width: 0; }
+.mini-label { font-size: 10.5px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); }
+.mini-value { font-size: 18px; font-weight: 700; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mini-note { font-size: 10.5px; color: var(--muted); line-height: 1.35; }
+.mini-card.mini-expense { border-left: 3px solid #f87171; }
+.mini-card.mini-income { border-left: 3px solid var(--accent); }
+.mini-card.mini-pending-income { border-left: 3px solid #38bdf8; }
+.mini-card.mini-pending-expense { border-left: 3px solid #fbbf24; }
+.mini-card.mini-balance { border-left: 3px solid #a78bfa; }
+.mini-bars { display: grid; gap: 3px; margin: 2px 0; }
+.mini-bar { display: block; height: 6px; border-radius: 999px; background: rgba(255, 255, 255, .08); overflow: hidden; min-width: 4px; }
+.mini-bar i { display: block; height: 100%; border-radius: 999px; }
+.mini-bar.income i { background: var(--accent); }
+.mini-bar.expense i { background: #f87171; }
+.filter-card .date-field { display: grid; gap: 2px; font-size: 10px; color: var(--muted); }
+.filter-card .date-field input { padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface-2, rgba(255,255,255,.04)); color: var(--text); font-size: 12px; }
+.filter-chip { display: inline-flex; align-items: center; padding: 5px 10px; border-radius: 999px; font-size: 11px; background: rgba(46, 204, 145, .12); color: var(--accent); border: 1px solid rgba(46, 204, 145, .3); }
+@media (max-width: 1100px) { .mini-dashboard { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 640px) { .mini-dashboard { grid-template-columns: repeat(2, minmax(0, 1fr)); } .mini-card.mini-balance { grid-column: 1 / -1; } }
+
+/* ---------- endereco com CEP ---------- */
+.address-block { border: 1px solid var(--line); border-radius: 14px; padding: 12px; background: rgba(255, 255, 255, .02); }
+.cep-row { display: grid; grid-template-columns: minmax(180px, 240px) 1fr; gap: 10px; align-items: end; margin-bottom: 10px; }
+.input-action { display: flex; gap: 6px; align-items: center; }
+.input-action input { flex: 1; min-width: 0; }
+.cep-status { margin: 0 0 4px; }
+.cep-status[data-state="ok"] { color: var(--accent); }
+.cep-status[data-state="error"] { color: #f87171; }
+.cep-status[data-state="loading"] { color: #38bdf8; }
+.address-grid { margin-top: 2px; }
+.field-small { max-width: 110px; }
+@media (max-width: 640px) { .cep-row { grid-template-columns: 1fr; } .field-small { max-width: none; } }
+
+/* ---------- formas de pagamento e tipos ---------- */
+.payment-icon { width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center; border-radius: 10px; background: rgba(255, 255, 255, .06); font-size: 14px; }
+.uppercase-input { text-transform: uppercase; }
+
+/* ---------- estimativa de investimentos ---------- */
+.metric-highlight { border-color: rgba(46, 204, 145, .4); background: rgba(46, 204, 145, .07); }
+.estimate-box { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; border: 1px dashed rgba(46, 204, 145, .45); border-radius: 14px; padding: 12px 14px; margin: 12px 0; background: rgba(46, 204, 145, .06); }
+.estimate-box strong { display: block; font-size: 20px; }
+.estimate-box small { color: var(--muted); font-size: 11px; }
+.estimate-badge { padding: 5px 10px; border-radius: 999px; font-size: 11px; background: rgba(255, 255, 255, .07); color: var(--muted); }
+.estimate-callout { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; border: 1px solid rgba(46, 204, 145, .35); border-radius: 14px; padding: 12px 14px; margin-bottom: 12px; background: rgba(46, 204, 145, .07); }
+.estimate-callout strong { display: block; font-size: 18px; }
+.estimate-callout small { color: var(--muted); font-size: 11px; }
+.estimate-callout.compact { margin-bottom: 10px; }
+.estimate-method { display: block; font-size: 10px; color: var(--muted); max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 640px) { .estimate-method { max-width: 120px; } }
+
+/* ---------- correcoes de responsividade 360px (28/11/2026) ---------- */
+.kind-pill { position: relative; }
+.kind-pill input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.filter-card select, .filter-card input { min-width: 0; max-width: 100%; }
+@media (max-width: 640px) {
+    .filter-card select, .filter-card input, .filter-card .date-field, .filter-card .button { flex: 1 1 100%; width: 100%; }
+    .filter-card .date-field input { width: 100%; }
+}

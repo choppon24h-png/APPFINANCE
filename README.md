@@ -181,8 +181,33 @@ Esta rodada adiciona três frentes que conversam entre si:
 - Pílulas de tipo no formulário, campos de endereço/identificadores só para imóvel, cartões de imóvel com total do mês e atalho para `/lancamentos?cost_center_id=…&date_from=…&date_to=…`.
 - Filtros `?tipo=property` na lista e `center_kind=property` em `/lancamentos`; a lista mostra o imóvel e o 📎 do anexo.
 
+## CEP, dashboard, formas de pagamento e investimentos (28/11/2026)
+
+### 1. CEP nos centros de custo (`/centros-custo`)
+- O endereço passou a ser estruturado: `zip_code`, `street`, `address_number`, `complement`, `neighborhood`, `city`, `state`. O campo antigo `address` continua preenchido por `CostCenter::composeAddress()`, então relatórios e lançamentos antigos não quebram.
+- Busca automática ao digitar os 8 dígitos (ou ao sair do campo) por `GET /api/cep?cep=01310-100`, com máscara, debounce e preenchimento de rua/bairro/cidade/UF.
+- **Fallback em cascata**: ViaCEP → BrasilAPI → OpenCEP. A resposta informa a fonte (`{"fonte":"ViaCEP","cache":true}`) e a tela mostra "Endereço preenchido · ViaCEP". Se um provedor cair, o próximo responde; se todos falharem, o formulário segue editável (a busca nunca bloqueia o cadastro).
+- Cache de 7 dias em `storage/cache/cep/` (um JSON por CEP), reduzindo latência e evitando rate-limit.
+
+### 2. `/lancamentos` — débitos do mês e mini dashboard
+- Ao abrir sem filtros, a lista mostra **somente despesas do mês corrente** (tipo `expense`, de 1º ao último dia) e exibe o chip "Mostrando apenas débitos de novembro de 2026" com o link **Ver todos** (`?filtro=1` desliga o padrão).
+- Mini dashboard com cinco cartões a partir de `Transaction::summary()`: **Despesas no mês** (pagas), **Receitas no mês** (recebidas), **Receitas pendentes** (previstas + atrasadas), **Despesas pendentes** (pendentes + atrasadas) e **Receitas × Despesas** (resultado do mês).
+- Os filtros de data, tipo, conta, categoria, centro de custo e busca continuam disponíveis; qualquer envio do formulário desliga o padrão.
+
+### 3. Lançamentos em MAIÚSCULA e forma "DÉBITO EM CONTA"
+- `FinanceService` normaliza descrição e observação com `mb_strtoupper` (acentos preservados) antes de gravar; o formulário também aplica maiúsculas enquanto se digita.
+- O catálogo `payment_methods` (global ou por usuário) substituiu a lista fixa: 9 formas padrão, incluindo **DÉBITO EM CONTA**. Os slugs legados (`pix`, `boleto`, `credit`, `debit`, `cash`, `transfer`, `other`) continuam aceitos para não quebrar lançamentos antigos.
+- Novo submenu **Categorias → Formas de pagamento** (`/formas-pagamento`): criar, editar, ativar/desativar e excluir (bloqueado quando já existe lançamento usando a forma).
+
+### 4. Investimentos com receita estimada
+- Contas do tipo `investment` aceitam **tipo de investimento** e **taxa contratada** opcionais (`accounts.investment_type_id`, `investment_rate`, `investment_rate_period`).
+- Catálogo `investment_types` com 14 tipos padrão (CDB, LCI, LCA, Tesouro Selic/IPCA+/Prefixado, CDI, Poupança, Fundo DI, Ações, ETF, Previdência, Cripto, Outros), editável em **Investimentos → Tipos de investimento** (`/investimentos/tipos`).
+- `investments` ganhou `investment_type_id`, `benchmark_rate` (% do CDI/Selic/IPCA) e `rate_period` (`monthly`/`yearly`).
+- `InvestmentProjection` calcula a receita estimada: CDI/Selic 10,65% a.a. e IPCA 4,50% a.a. como referências no model, prefixado e taxa mensal. Exemplo: CDB de 110% do CDI sobre R$ 10.000 → **R$ 92,74/mês**.
+- A tela de investimentos mostra "Receita estimada do mês", a coluna "Estimado/mês" e o botão **Lançar estimado**, que abre o rendimento já preenchido (`/investimentos/{id}/rendimento?estimado=1`). O usuário confirma o valor real do mês; a estimativa é apenas sugestão.
+
 ### Migration e ordem de deploy
-- A migration desta rodada é **`database/migrations/0006_documents_properties.sql`**. O pedido citava `0005_documents_properties.sql`, mas a **0005 já é a de bancos** (`0005_banks.sql`); renumerar evitou colisão.
+- A migration desta rodada é **`database/migrations/0007_cep_payments_investments.sql`** (a anterior foi a `0006_documents_properties.sql`; o pedido citava `0005`, mas a **0005 já é a de bancos**, então foi renumerada).
 - Ela é idempotente (consulta `information_schema` + `PREPARE/EXECUTE`), pode ser importada duas vezes no phpMyAdmin sem erro e não altera dados existentes (centros antigos viram `kind = 'general'`).
 - **Ordem obrigatória**: 1) importar a migration no MySQL de produção; 2) enviar os arquivos; 3) conferir permissão de escrita em `storage/uploads`.
 - Versão PostgreSQL regenerada por `python3 tools/build_postgres_sql.py --validar` (o gerador agora entende o padrão `information_schema` + `PREPARE` e produz `ADD COLUMN IF NOT EXISTS` / `CREATE INDEX IF NOT EXISTS`).

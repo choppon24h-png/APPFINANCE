@@ -15,7 +15,9 @@ $menu = [
     ['/lancamentos', 'Lançamentos', 'list'],
     ['/contas', 'Contas', 'wallet'],
     ['/investimentos', 'Investimentos', 'trend'],
+    ['/investimentos/tipos', 'Tipos de investimento', 'trend', true],
     ['/categorias', 'Categorias', 'tag'],
+    ['/formas-pagamento', 'Formas de pagamento', 'wallet', true],
     ['/centros-custo', 'Imóveis e centros', 'layers'],
     ['/relatorios', 'Relatórios', 'chart'],
 ];
@@ -68,9 +70,9 @@ foreach (array_column(array_merge($menu, $menuAdmin), 0) as $hrefMenu) {
         </div>
         <p class="sidebar-caption">Controle Financeiro</p>
         <nav class="main-nav" aria-label="Navegação principal">
-            <?php foreach ($menu as [$href, $label, $icon]): ?>
-                <a class="nav-item <?= $hrefAtivo === $href ? 'active' : '' ?>" href="<?= $href ?>"<?= $hrefAtivo === $href ? ' aria-current="page"' : '' ?>>
-                    <span class="nav-icon" data-icon="<?= $icon ?>" aria-hidden="true"></span><span><?= $label ?></span>
+            <?php foreach ($menu as $item): [$href, $label, $icon] = $item; $sub = !empty($item[3]); ?>
+                <a class="nav-item <?= $sub ? 'nav-sub' : '' ?> <?= $hrefAtivo === $href ? 'active' : '' ?>" href="<?= $href ?>"<?= $hrefAtivo === $href ? ' aria-current="page"' : '' ?>>
+                    <span class="nav-icon" data-icon="<?= $icon ?>" aria-hidden="true"></span><span><?= $sub ? '↳ ' : '' ?><?= $label ?></span>
                 </a>
             <?php endforeach; ?>
         </nav>
