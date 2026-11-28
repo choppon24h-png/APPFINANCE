@@ -257,17 +257,20 @@ atualizacao += """
 # um banco que já tem parte da estrutura sem erro e sem duplicar dados.
 extras = [p for p in sorted((RAIZ / "database" / "migrations").glob("0*.sql"))
           if p.name >= "0006"]
+extras_blocos = []
 for caminho in extras:
     corpo = "\n".join(
         linha for linha in caminho.read_text(encoding="utf-8").splitlines()
         if not linha.lstrip().startswith("--") and linha.strip() not in ("", "SET NAMES utf8mb4;")
     )
-    atualizacao += (
+    bloco = (
         "\n-- ============================================================\n"
         f"-- {caminho.name} — incluída integralmente (idempotente)\n"
         "-- ============================================================\n"
         + corpo + "\n"
     )
+    extras_blocos.append(bloco)
+    atualizacao += bloco
 
 atualizacao += """
 -- ============================================================
@@ -322,3 +325,169 @@ SELECT (SELECT COUNT(*) FROM `users`) AS usuarios,
 
 for f in sorted(OUT.glob("*.sql")):
     print(f.name, f.stat().st_size, "bytes")
+
+
+# ---------------------------------------------------------------- arquivo unico
+# Serve para banco novo E para banco que ja tem dados: cria apenas o que falta,
+# aplica 0004..0007 e carrega os catalogos, sem DROP/TRUNCATE.
+def consultar(sql: str) -> list[list[str]]:
+    saida = run(MY + ["-N", "-B", "-e", sql, DB]).stdout
+    return [linha.split("\t") for linha in saida.splitlines() if linha.strip()]
+
+
+def esc(valor: str) -> str:
+    return valor.replace("\\", "\\\\").replace("'", "''")
+
+
+# mysqldump coloca DROP TABLE antes de cada CREATE; no arquivo unico isso
+# apagaria os dados, entao as linhas de DROP sao removidas.
+estrutura_sem_drop = re.sub(r"^DROP TABLE IF EXISTS .*;\n", "", estrutura, flags=re.M)
+estrutura_unica = re.sub(r"^CREATE TABLE `", "CREATE TABLE IF NOT EXISTS `", estrutura_sem_drop, flags=re.M)
+
+# Dados de acesso e bancos: INSERT IGNORE usa as chaves unicas existentes.
+dados_acl = clean(run(DUMP + ["--no-create-info", "--complete-insert", "--skip-extended-insert",
+                              DB, "roles", "permissions", "role_permissions"]).stdout)
+dados_bancos = clean(run(DUMP + ["--no-create-info", "--complete-insert", "--skip-extended-insert",
+                                 DB, "banks"]).stdout)
+dados_acl = dados_acl.replace("INSERT INTO", "INSERT IGNORE INTO")
+dados_bancos = dados_bancos.replace("INSERT INTO", "INSERT IGNORE INTO")
+
+seeds_categorias = []
+for nome, tipo, icone, cor, status in consultar(
+        "SELECT name, type, IFNULL(icon,''), IFNULL(color,''), status "
+        "FROM categories WHERE user_id IS NULL ORDER BY id"):
+    seeds_categorias.append(
+        "INSERT INTO `categories` (`user_id`, `name`, `type`, `icon`, `color`, `status`)\n"
+        f"SELECT NULL, '{esc(nome)}', '{esc(tipo)}', '{esc(icone)}', '{esc(cor)}', '{esc(status)}' FROM DUAL\n"
+        f"WHERE NOT EXISTS (SELECT 1 FROM `categories` WHERE `user_id` IS NULL "
+        f"AND `name` = '{esc(nome)}' AND `type` = '{esc(tipo)}');"
+    )
+
+seeds_centros = []
+for nome, tipo, status in consultar(
+        "SELECT name, IFNULL(kind,'general'), status FROM cost_centers "
+        "WHERE user_id IS NULL ORDER BY id"):
+    seeds_centros.append(
+        "INSERT INTO `cost_centers` (`user_id`, `name`, `kind`, `status`)\n"
+        f"SELECT NULL, '{esc(nome)}', '{esc(tipo)}', '{esc(status)}' FROM DUAL\n"
+        f"WHERE NOT EXISTS (SELECT 1 FROM `cost_centers` WHERE `user_id` IS NULL AND `name` = '{esc(nome)}');"
+    )
+
+HEADER_UNICO = """-- ============================================================
+-- SOMASE — Controle Financeiro
+-- ARQUIVO UNICO DO MYSQL (MySQL 5.7+ / MySQL 8 / MariaDB 10.3+)
+--
+-- Serve para os dois cenarios, sem precisar escolher outro arquivo:
+--   * banco novo/vazio  -> cria tudo e carrega os catalogos;
+--   * banco com dados   -> cria somente o que falta, preserva tudo.
+--
+-- ####################################################################
+-- ##  ESTE ARQUIVO NAO APAGA NADA.                                   ##
+-- ##  Nao existe DROP TABLE, TRUNCATE ou DELETE.                     ##
+-- ##  Pode ser importado quantas vezes quiser (idempotente).         ##
+-- ####################################################################
+--
+-- O QUE ELE FAZ, NESTA ORDEM
+--   1. cria as tabelas que faltarem (CREATE TABLE IF NOT EXISTS);
+--   2. aplica as migrations 0004, 0005, 0006 e 0007 (colunas, indices,
+--      payment_methods, investment_types e campos de investimento);
+--   3. carrega perfis, permissoes, bancos, categorias e centros padrao,
+--      sempre com WHERE NOT EXISTS / INSERT IGNORE (nada duplica);
+--   4. cria o usuario inicial admin@example.com / Admin@123 se ainda
+--      nao existir (troque a senha depois);
+--   5. termina com consultas de verificacao.
+--
+-- COMO IMPORTAR (phpMyAdmin)
+--   1. selecione o banco no menu da esquerda;
+--   2. aba "Importar" > "Escolher arquivo" > somase_mysql_unico.sql > Executar;
+--   3. confira as consultas de verificacao no final.
+--   Via terminal: mysql -u USUARIO -p BANCO < somase_mysql_unico.sql
+--
+-- Para atualizar pela interface, sem SQL: /_atualizar.php
+-- ============================================================
+
+SET NAMES utf8mb4;
+SET FOREIGN_KEY_CHECKS = 0;
+SET UNIQUE_CHECKS = 0;
+SET SQL_MODE = 'NO_AUTO_VALUE_ON_ZERO';
+
+-- ============================================================
+-- 1. ESTRUTURA — cria apenas as tabelas que ainda nao existem
+-- ============================================================
+"""
+
+FOOTER_UNICO = """
+-- ============================================================
+-- 5. USUARIO INICIAL (somente se ainda nao existir)
+-- admin@example.com / Admin@123 — troque a senha no primeiro login
+-- ============================================================
+INSERT INTO `users` (`name`, `email`, `password`, `role_id`, `status`, `auth_provider`,
+                     `email_verified_at`, `terms_accepted_at`, `created_at`, `updated_at`)
+SELECT 'Administrador', 'admin@example.com',
+       '$2b$10$vWAdPPDyhPW0u/UeSpdf1eLsXidEiwemycK/I9x7I1DcVjCLSTJii',
+       r.id, 'active', 'local', NOW(), NOW(), NOW(), NOW()
+FROM `roles` r
+WHERE r.slug = 'superadmin'
+  AND NOT EXISTS (SELECT 1 FROM `users` WHERE `email` = 'admin@example.com');
+
+SET FOREIGN_KEY_CHECKS = 1;
+SET UNIQUE_CHECKS = 1;
+
+-- ============================================================
+-- VERIFICACAO FINAL
+-- Esperado: todas as colunas em 1 e as contagens preenchidas.
+-- ============================================================
+SELECT
+    (SELECT COUNT(*) FROM information_schema.TABLES
+      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_TYPE = 'BASE TABLE') AS tabelas_no_banco,
+    (SELECT COUNT(*) FROM information_schema.TABLES
+      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'payment_methods') AS tabela_formas_pagamento,
+    (SELECT COUNT(*) FROM information_schema.TABLES
+      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'investment_types') AS tabela_tipos_investimento,
+    (SELECT COUNT(*) FROM information_schema.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cost_centers'
+        AND COLUMN_NAME = 'zip_code') AS coluna_cep,
+    (SELECT COUNT(*) FROM information_schema.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'accounts'
+        AND COLUMN_NAME = 'investment_type_id') AS coluna_investimento_conta;
+
+SELECT (SELECT COUNT(*) FROM `roles`)             AS perfis,
+       (SELECT COUNT(*) FROM `permissions`)       AS permissoes,
+       (SELECT COUNT(*) FROM `banks`)             AS bancos,
+       (SELECT COUNT(*) FROM `categories`)        AS categorias,
+       (SELECT COUNT(*) FROM `cost_centers`)      AS centros_de_custo,
+       (SELECT COUNT(*) FROM `payment_methods`)   AS formas_de_pagamento,
+       (SELECT COUNT(*) FROM `investment_types`)  AS tipos_de_investimento,
+       (SELECT COUNT(*) FROM `users`)             AS usuarios;
+
+SELECT id, name, email, status FROM `users` ORDER BY id;
+
+SELECT 'Importacao concluida. Acesse /login e troque a senha do administrador.' AS resultado;
+"""
+
+unico = (
+    HEADER_UNICO
+    + estrutura_unica
+    + "\n-- ============================================================\n"
+    + "-- 1.1 PERFIS, PERMISSOES E BANCOS (INSERT IGNORE: nao duplica)\n"
+    + "-- ============================================================\n"
+    + dados_acl + "\n" + dados_bancos + "\n"
+    + "\n-- ============================================================\n"
+    + "-- 2. MIGRATIONS 0004 a 0007 (idempotentes)\n"
+    + "-- ============================================================\n"
+    + "\n".join(blocks) + "\n"
+    + corpo_bancos + "\n"
+    + "".join(extras_blocos)
+    + "\n-- ============================================================\n"
+    + "-- 3. CATEGORIAS PADRAO (globais, sem duplicar)\n"
+    + "-- ============================================================\n"
+    + "\n".join(seeds_categorias) + "\n"
+    + "\n-- ============================================================\n"
+    + "-- 4. CENTROS DE CUSTO PADRAO (globais, sem duplicar)\n"
+    + "-- ============================================================\n"
+    + "\n".join(seeds_centros) + "\n"
+    + FOOTER_UNICO
+)
+
+(OUT / "somase_mysql_unico.sql").write_text(unico)
+print("somase_mysql_unico.sql", len(unico.encode("utf-8")), "bytes")
