@@ -45,7 +45,7 @@ class DocumentAnalyzer
 
         $details = $code['details'] ?? [];
         $warnings = $code['warnings'] ?? [];
-        if ($texto['text_length'] < 40) {
+        if ($texto['text_length'] < 40 && $code === null) {
             $warnings[] = 'Pouco texto reconhecido: confira os campos antes de salvar.';
         }
         if ($amount === null) {
