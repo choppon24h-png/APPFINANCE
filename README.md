@@ -111,6 +111,21 @@ Para ler os logs no servidor (sem SSH), abra `/_logs.php` logado como administra
 - permite baixar o arquivo bruto e apagar logs com mais de 30 dias;
 - avisa quando `storage/logs` está sem permissão de escrita.
 
+### "Cadastrei e não apareceu": suporte técnico do usuário
+
+Quando um cadastro não aparece na tela, o caminho mais rápido é `/_suporte.php` (link **Suporte técnico** no rodapé do menu). A página é liberada para qualquer usuário logado e mostra:
+
+- identificação da sessão (id, nome, e-mail, perfil) e o `request_id` atual;
+- migrations pendentes (`Schema::pending()`) e o que exatamente falta;
+- quantas contas, lançamentos, centros de custo e investimentos existem **para aquele usuário**;
+- o botão **Testar gravação no banco**, que roda quatro passos dentro de uma transação com `rollback` (nada fica gravado): leitura de contas, insert com as colunas antigas, insert com as colunas da migration 0007 e leitura de `payment_methods`/`investment_types`. O resultado mostra `ok` ou a mensagem SQL completa (ex.: `SQLSTATE[42S22] ... Unknown column 'investment_rate'`);
+- os últimos 15 erros/avisos do log, já sem o ruído de testes automatizados;
+- um bloco **Diagnóstico para copiar**, para colar no atendimento.
+
+Cada teste gera um **código de 8 caracteres** exibido na tela e gravado no log (`suporte.teste_gravacao.ok` ou `suporte.teste_gravacao.falhou`). Os cadastros também ganharam código próprio: `conta.cadastro`, `lancamento.cadastro`, `centro_custo.cadastro`, `categoria.cadastro`, `investimento.cadastro`, `forma_pagamento.cadastro` e `tipo_investimento.cadastro`, sempre com as etapas `.inicio`, `.ok` (com o id criado e a contagem do usuário) e `.falhou` (com a exceção, o SQLSTATE e o payload mascarado). Basta procurar o código em `/_logs.php`.
+
+Se o teste falhar no passo "Gravação completa (com campos de investimento)" com `Unknown column`, a migration 0007 não foi aplicada: abra `/_atualizar.php` ou importe `database/sql/somase_mysql_unico.sql`. Se todos os passos passarem mas a tela continuar vazia, o problema está na listagem — compare o total mostrado em `conta.listagem` no log com o que a tela exibe.
+
 Se `storage/logs` não for gravável, o Logger tenta criá-la com 0755 e, em último caso, grava no diretório temporário do PHP — a aplicação nunca quebra por causa do log.
 
 ## Desenvolvimento local

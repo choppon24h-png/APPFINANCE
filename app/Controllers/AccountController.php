@@ -4,6 +4,8 @@ namespace App\Controllers;
 use App\Core\Auth;
 use App\Core\Audit\AuditLogger;
 use App\Core\Controller;
+use App\Core\Diagnostics;
+use App\Core\Logger;
 use App\Models\Account;
 use App\Models\InvestmentType;
 use App\Support\FinanceInput;
@@ -15,7 +17,9 @@ class AccountController extends Controller
 
     public function index(): void
     {
-        $this->view('accounts/index', ['title' => 'Contas', 'accounts' => (new Account())->forUser($this->userId())]);
+        $contas = (new Account())->forUser($this->userId());
+        Logger::debug('conta.listagem', ['user_id' => $this->userId(), 'total' => count($contas)]);
+        $this->view('accounts/index', ['title' => 'Contas', 'accounts' => $contas]);
     }
 
     public function create(): void
@@ -28,12 +32,24 @@ class AccountController extends Controller
 
     public function store(): void
     {
+        $codigo = Diagnostics::inicio('conta.cadastro', [
+            'user_id' => $this->userId(), 'payload' => Diagnostics::payload($_POST),
+        ]);
         try {
             $data = $this->input($_POST, true);
             $id = (new Account())->create($this->userId(), $data);
             AuditLogger::log('create', 'account', $id, ['account_type' => $data['account_type']]);
+            $total = count((new Account())->forUser($this->userId()));
+            Diagnostics::sucesso('conta.cadastro', $codigo, [
+                'user_id' => $this->userId(), 'account_id' => $id, 'contas_do_usuario' => $total,
+            ]);
             $this->flash('success', 'Conta cadastrada.');
-        } catch (Throwable $e) { $this->flash('error', $e instanceof \InvalidArgumentException ? $e->getMessage() : 'Não foi possível cadastrar a conta.'); }
+        } catch (Throwable $e) {
+            Diagnostics::falha('conta.cadastro', $codigo, $e, [
+                'user_id' => $this->userId(), 'payload' => Diagnostics::payload($_POST),
+            ]);
+            $this->flash('error', Diagnostics::mensagem($e, $codigo, 'Não foi possível cadastrar a conta.'));
+        }
         $this->redirect('/contas');
     }
 
@@ -49,12 +65,17 @@ class AccountController extends Controller
 
     public function update(string $id): void
     {
+        $codigo = Diagnostics::inicio('conta.atualizacao', ['user_id' => $this->userId(), 'payload' => Diagnostics::payload($_POST)]);
         try {
             $id = FinanceInput::intId($id, 'Conta', true);
             (new Account())->update($id, $this->userId(), $this->input($_POST, false));
             AuditLogger::log('update', 'account', $id);
+            Diagnostics::sucesso('conta.atualizacao', $codigo, ['user_id' => $this->userId(), 'account_id' => $id]);
             $this->flash('success', 'Conta atualizada.');
-        } catch (Throwable $e) { $this->flash('error', $e instanceof \InvalidArgumentException ? $e->getMessage() : 'Não foi possível atualizar a conta.'); }
+        } catch (Throwable $e) {
+            Diagnostics::falha('conta.atualizacao', $codigo, $e, ['user_id' => $this->userId(), 'account_id' => $id]);
+            $this->flash('error', Diagnostics::mensagem($e, $codigo, 'Não foi possível atualizar a conta.'));
+        }
         $this->redirect('/contas');
     }
 

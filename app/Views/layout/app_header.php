@@ -105,6 +105,7 @@ foreach (array_column(array_merge($menu, $menuAdmin), 0) as $hrefMenu) {
         <?php endif; ?>
         <div class="sidebar-bottom">
             <div class="user-mini"><span class="avatar"><?= htmlspecialchars(mb_strtoupper(mb_substr($usuarioLogado->name ?? 'U', 0, 1))) ?></span><div><strong><?= htmlspecialchars($usuarioLogado->name ?? '') ?></strong><small><?= htmlspecialchars($usuarioLogado->role_name ?? 'Usuário') ?></small></div></div>
+            <a href="/_suporte.php" class="logout-link"><span class="nav-icon" data-icon="clipboard" aria-hidden="true"></span>Suporte técnico</a>
             <a href="/logout" class="logout-link"><span class="nav-icon" data-icon="logout" aria-hidden="true"></span>Sair</a>
         </div>
     </aside>

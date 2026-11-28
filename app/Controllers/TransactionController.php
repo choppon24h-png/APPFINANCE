@@ -4,6 +4,7 @@ namespace App\Controllers;
 use App\Core\Auth;
 use App\Core\Audit\AuditLogger;
 use App\Core\Controller;
+use App\Core\Diagnostics;
 use App\Core\Logger;
 use App\Models\Account;
 use App\Models\Category;
@@ -63,14 +64,23 @@ class TransactionController extends Controller
 
     public function store(): void
     {
+        $codigo = Diagnostics::inicio('lancamento.cadastro', [
+            'user_id' => $this->userId(), 'payload' => Diagnostics::payload($_POST),
+        ]);
         try {
             $id = (new FinanceService())->createTransaction($this->userId(), $_POST);
             $this->processAttachment($id);
             AuditLogger::log('create', 'transaction', $id, ['type' => $_POST['type'] ?? null]);
+            Diagnostics::sucesso('lancamento.cadastro', $codigo, [
+                'user_id' => $this->userId(), 'transaction_id' => $id, 'tipo' => $_POST['type'] ?? null,
+            ]);
             $this->flash('success', 'Lançamento salvo com sucesso.');
             $this->redirect('/lancamentos');
         } catch (Throwable $e) {
-            $this->flash('error', $e instanceof \InvalidArgumentException ? $e->getMessage() : 'Não foi possível salvar o lançamento.');
+            Diagnostics::falha('lancamento.cadastro', $codigo, $e, [
+                'user_id' => $this->userId(), 'payload' => Diagnostics::payload($_POST),
+            ]);
+            $this->flash('error', Diagnostics::mensagem($e, $codigo, 'Não foi possível salvar o lançamento.'));
             $this->redirect('/lancamentos/novo');
         }
     }

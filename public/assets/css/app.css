@@ -509,6 +509,8 @@ p { margin: 0 0 10px; }
 }
 .empty-state h3 { margin: 6px 0 2px; font-size: 14.5px; }
 .empty-state p { max-width: 300px; margin: 0 0 12px; color: var(--muted); font-size: 12px; }
+.empty-state p.empty-help { max-width: 320px; margin: 10px 0 0; font-size: 11.5px; }
+.empty-state p.empty-help a { color: var(--accent, #8fb6ff); text-decoration: underline; }
 .empty-state .button { margin-top: 2px; }
 
 /* ============================================================

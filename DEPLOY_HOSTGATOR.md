@@ -103,6 +103,27 @@ filtra por texto e por nível, baixa o log bruto e apaga arquivos com mais de
 código na busca para achar a linha exata. **Apague `public/_logs.php` depois
 de usar.**
 
+### Suporte do usuário (`/_suporte.php`)
+
+Envie também `public/_suporte.php`. É a tela que o usuário final abre pelo
+link **Suporte técnico** no rodapé do menu quando um cadastro não aparece.
+Ela não exige administrador e mostra: identificação da sessão, migrations
+pendentes, contagem dos dados daquele usuário e o botão **Testar gravação no
+banco** — que faz `INSERT` de uma conta temporária dentro de uma transação e
+desfaz tudo, apontando a coluna ou tabela que falta.
+
+Cada teste e cada cadastro (conta, lançamento, centro de custo, categoria,
+investimento, forma de pagamento, tipo de investimento) gera um **código de 8
+caracteres** no formato `A1B2C3D4`, exibido na mensagem de erro e gravado no
+log nas linhas `*.inicio`, `*.ok` e `*.falhou`. Peça esse código ao usuário e
+pesquise em `/_logs.php`.
+
+Se o teste acusar `Unknown column 'investment_rate'` (ou outra coluna da
+migration 0007), o banco está desatualizado: rode `/_atualizar.php` ou
+importe `database/sql/somase_mysql_unico.sql`. **Você pode manter
+`public/_suporte.php` no servidor** — ela não expõe dados de outros usuários
+— mas apague-a se preferir não divulgar a página.
+
 ## 5. Permissões de pastas
 
 O PHP precisa gravar em `storage/` (sessões, logs, uploads). No Gerenciador

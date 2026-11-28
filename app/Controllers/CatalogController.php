@@ -4,6 +4,7 @@ namespace App\Controllers;
 use App\Core\Auth;
 use App\Core\Audit\AuditLogger;
 use App\Core\Controller;
+use App\Core\Diagnostics;
 use App\Models\Category;
 use App\Models\CostCenter;
 use App\Services\CepService;
@@ -23,12 +24,19 @@ class CatalogController extends Controller
 
     public function categoryStore(): void
     {
+        $codigo = Diagnostics::inicio('categoria.cadastro', [
+            'user_id' => $this->userId(), 'payload' => Diagnostics::payload($_POST),
+        ]);
         try {
             $data = $this->categoryInput($_POST);
             $id = (new Category())->create($this->userId(), $data);
             AuditLogger::log('create', 'category', $id);
+            Diagnostics::sucesso('categoria.cadastro', $codigo, ['user_id' => $this->userId(), 'category_id' => $id]);
             $this->flash('success', 'Categoria criada.');
-        } catch (Throwable $e) { $this->flash('error', $e instanceof \InvalidArgumentException ? $e->getMessage() : 'Não foi possível criar a categoria.'); }
+        } catch (Throwable $e) {
+            Diagnostics::falha('categoria.cadastro', $codigo, $e, ['user_id' => $this->userId(), 'payload' => Diagnostics::payload($_POST)]);
+            $this->flash('error', $e instanceof \InvalidArgumentException ? $e->getMessage() : Diagnostics::mensagem($e, $codigo, 'Não foi possível criar a categoria.'));
+        }
         $this->redirect('/categorias');
     }
 
@@ -86,11 +94,18 @@ class CatalogController extends Controller
 
     public function costCenterStore(): void
     {
+        $codigo = Diagnostics::inicio('centro_custo.cadastro', [
+            'user_id' => $this->userId(), 'payload' => Diagnostics::payload($_POST),
+        ]);
         try {
             $data = $this->costCenterInput($_POST); $id = (new CostCenter())->create($this->userId(), $data);
             AuditLogger::log('create', 'cost_center', $id, ['kind' => $data['kind']]);
+            Diagnostics::sucesso('centro_custo.cadastro', $codigo, ['user_id' => $this->userId(), 'cost_center_id' => $id, 'kind' => $data['kind']]);
             $this->flash('success', $data['kind'] === 'property' ? 'Imóvel cadastrado.' : 'Centro de custo criado.');
-        } catch (Throwable $e) { $this->flash('error', $e instanceof \InvalidArgumentException ? $e->getMessage() : 'Não foi possível criar o centro de custo.'); }
+        } catch (Throwable $e) {
+            Diagnostics::falha('centro_custo.cadastro', $codigo, $e, ['user_id' => $this->userId(), 'payload' => Diagnostics::payload($_POST)]);
+            $this->flash('error', Diagnostics::mensagem($e, $codigo, 'Não foi possível criar o centro de custo.'));
+        }
         $this->redirect('/centros-custo');
     }
 

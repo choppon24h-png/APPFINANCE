@@ -4,6 +4,7 @@ namespace App\Controllers;
 use App\Core\Auth;
 use App\Core\Audit\AuditLogger;
 use App\Core\Controller;
+use App\Core\Diagnostics;
 use App\Models\PaymentMethod;
 use App\Support\FinanceInput;
 use App\Support\Slug;
@@ -29,13 +30,18 @@ class PaymentMethodController extends Controller
 
     public function store(): void
     {
+        $codigo = Diagnostics::inicio('forma_pagamento.cadastro', [
+            'user_id' => $this->userId(), 'payload' => Diagnostics::payload($_POST),
+        ]);
         try {
             $data = $this->input($_POST);
             $id = (new PaymentMethod())->create($this->userId(), $data);
             AuditLogger::log('create', 'payment_method', $id);
+            Diagnostics::sucesso('forma_pagamento.cadastro', $codigo, ['user_id' => $this->userId(), 'payment_method_id' => $id]);
             $this->flash('success', 'Forma de pagamento criada.');
         } catch (Throwable $e) {
-            $this->flash('error', $e instanceof \InvalidArgumentException ? $e->getMessage() : 'Não foi possível criar a forma de pagamento.');
+            Diagnostics::falha('forma_pagamento.cadastro', $codigo, $e, ['user_id' => $this->userId(), 'payload' => Diagnostics::payload($_POST)]);
+            $this->flash('error', Diagnostics::mensagem($e, $codigo, 'Não foi possível criar a forma de pagamento.'));
         }
         $this->redirect('/formas-pagamento');
     }

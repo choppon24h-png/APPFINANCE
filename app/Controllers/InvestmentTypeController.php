@@ -4,6 +4,7 @@ namespace App\Controllers;
 use App\Core\Auth;
 use App\Core\Audit\AuditLogger;
 use App\Core\Controller;
+use App\Core\Diagnostics;
 use App\Models\InvestmentType;
 use App\Support\FinanceInput;
 use App\Support\Slug;
@@ -30,12 +31,17 @@ class InvestmentTypeController extends Controller
 
     public function store(): void
     {
+        $codigo = Diagnostics::inicio('tipo_investimento.cadastro', [
+            'user_id' => $this->userId(), 'payload' => Diagnostics::payload($_POST),
+        ]);
         try {
             $id = (new InvestmentType())->create($this->userId(), $this->input($_POST));
             AuditLogger::log('create', 'investment_type', $id);
+            Diagnostics::sucesso('tipo_investimento.cadastro', $codigo, ['user_id' => $this->userId(), 'investment_type_id' => $id]);
             $this->flash('success', 'Tipo de investimento criado.');
         } catch (Throwable $e) {
-            $this->flash('error', $e instanceof \InvalidArgumentException ? $e->getMessage() : 'Não foi possível criar o tipo de investimento.');
+            Diagnostics::falha('tipo_investimento.cadastro', $codigo, $e, ['user_id' => $this->userId(), 'payload' => Diagnostics::payload($_POST)]);
+            $this->flash('error', Diagnostics::mensagem($e, $codigo, 'Não foi possível criar o tipo de investimento.'));
         }
         $this->redirect('/investimentos/tipos');
     }

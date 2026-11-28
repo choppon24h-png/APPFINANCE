@@ -4,6 +4,7 @@ namespace App\Controllers;
 use App\Core\Auth;
 use App\Core\Audit\AuditLogger;
 use App\Core\Controller;
+use App\Core\Diagnostics;
 use App\Models\Account;
 use App\Models\Investment;
 use App\Models\InvestmentType;
@@ -43,11 +44,18 @@ class InvestmentController extends Controller
 
     public function store(): void
     {
+        $codigo = Diagnostics::inicio('investimento.cadastro', [
+            'user_id' => $this->userId(), 'payload' => Diagnostics::payload($_POST),
+        ]);
         try {
             $id = (new InvestmentService())->create($this->userId(), $_POST);
             AuditLogger::log('create', 'investment', $id);
+            Diagnostics::sucesso('investimento.cadastro', $codigo, ['user_id' => $this->userId(), 'investment_id' => $id]);
             $this->flash('success', 'Investimento aplicado e saldo da conta atualizado.');
-        } catch (Throwable $e) { $this->flash('error', $e instanceof \InvalidArgumentException ? $e->getMessage() : 'Não foi possível cadastrar o investimento.'); }
+        } catch (Throwable $e) {
+            Diagnostics::falha('investimento.cadastro', $codigo, $e, ['user_id' => $this->userId(), 'payload' => Diagnostics::payload($_POST)]);
+            $this->flash('error', Diagnostics::mensagem($e, $codigo, 'Não foi possível cadastrar o investimento.'));
+        }
         $this->redirect('/investimentos');
     }
 
