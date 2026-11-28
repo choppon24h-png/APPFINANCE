@@ -43,6 +43,8 @@ try {
     // antes do controller ser chamado. Se o projeto for single-tenant,
     // remova este bloco e o TenantMiddleware.
     if (!$ehPublica && $uriAtual !== '/selecionar-empresa' && $uriAtual !== '/cadastro/completar' && Auth::check()) {
+        // Sessao antiga (banco reimportado) nao pode gravar: cai no login.
+        Auth::ensureValidSession();
         (new TenantMiddleware())->handle();
     }
 

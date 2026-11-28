@@ -120,7 +120,14 @@ pesquise em `/_logs.php`.
 
 Se o teste acusar `Unknown column 'investment_rate'` (ou outra coluna da
 migration 0007), o banco está desatualizado: rode `/_atualizar.php` ou
-importe `database/sql/somase_mysql_unico.sql`. **Você pode manter
+importe `database/sql/somase_mysql_unico.sql`.
+
+Se o teste acusar `Integrity constraint violation: 1452 ... fk_accounts_user`,
+a estrutura está certa mas a sessão é de um banco anterior: o `user_id` do
+cookie não existe mais em `users`. Peça ao usuário para sair e entrar
+novamente (a próxima página já faz isso sozinha, com aviso no login). Para
+conferir os usuários e as linhas órfãs, rode `database/sql/diagnostico_usuarios.sql`
+no phpMyAdmin — são apenas consultas. **Você pode manter
 `public/_suporte.php` no servidor** — ela não expõe dados de outros usuários
 — mas apague-a se preferir não divulgar a página.
 

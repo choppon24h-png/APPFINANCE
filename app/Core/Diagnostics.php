@@ -62,6 +62,14 @@ final class Diagnostics
             return $e->getMessage();
         }
 
+        // Chave estrangeira do usuario: sessao de um banco anterior.
+        if (str_contains($e->getMessage(), '1452')
+            && (str_contains($e->getMessage(), 'user_id') || str_contains($e->getMessage(), 'fk_accounts_user'))) {
+            $uid = (int) ($_SESSION['user_id'] ?? 0);
+            return 'Sua sessão é de um banco anterior: o usuário #' . $uid . ' não existe mais. '
+                . 'Saia e entre novamente. Código ' . $codigo . '.';
+        }
+
         $estrutura = self::estruturaFaltante($e->getMessage());
         if ($estrutura !== null) {
             return 'Banco desatualizado: ' . $estrutura . '. Abra /_atualizar.php (ou importe '

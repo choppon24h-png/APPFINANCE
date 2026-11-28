@@ -126,6 +126,8 @@ Cada teste gera um **código de 8 caracteres** exibido na tela e gravado no log 
 
 Se o teste falhar no passo "Gravação completa (com campos de investimento)" com `Unknown column`, a migration 0007 não foi aplicada: abra `/_atualizar.php` ou importe `database/sql/somase_mysql_unico.sql`. Se todos os passos passarem mas a tela continuar vazia, o problema está na listagem — compare o total mostrado em `conta.listagem` no log com o que a tela exibe.
 
+**Sessão de um banco anterior (erro 1452).** Quando o banco é reimportado e os IDs dos usuários mudam, o navegador pode continuar com um cookie de sessão que aponta para um `user_id` inexistente. O MySQL recusa a gravação com `Integrity constraint violation: 1452 ... fk_accounts_user`, a tela mostra zero contas e o cadastro falha. O sistema agora confere o `user_id` da sessão em `users` a cada página autenticada (`Auth::ensureValidSession()`), encerra a sessão órfã e leva ao login com o aviso “Sua sessão era de um banco anterior...”. O evento fica no log como `auth.sessao_orfa`. A tela `/_suporte.php` mostra a linha **Usuário no banco** e, nesse caso, o link **Sair e entrar novamente**. Para conferir os usuários existentes e as linhas órfãs, rode `database/sql/diagnostico_usuarios.sql` (somente leitura) no phpMyAdmin.
+
 Se `storage/logs` não for gravável, o Logger tenta criá-la com 0755 e, em último caso, grava no diretório temporário do PHP — a aplicação nunca quebra por causa do log.
 
 ## Desenvolvimento local

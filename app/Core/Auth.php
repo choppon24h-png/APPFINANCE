@@ -115,6 +115,63 @@ class Auth {
         return isset($_SESSION['user_id']);
     }
 
+    /**
+     * O usuario guardado na sessao ainda existe na tabela users?
+     *
+     * Retorna null quando nao ha sessao ou quando o banco nao respondeu
+     * (nesse caso nao derrubamos ninguem). Retorna false para sessao orfa:
+     * cenario comum depois de reimportar o banco, quando os IDs mudam e o
+     * navegador continua com o cookie antigo. Sem essa checagem o INSERT
+     * falha com "foreign key constraint fails (fk_accounts_user)".
+     */
+    public static function sessionUserExists(): ?bool {
+        if (!isset($_SESSION['user_id'])) {
+            return null;
+        }
+        try {
+            $stmt = Database::getInstance()->prepare('SELECT id FROM users WHERE id = :id LIMIT 1');
+            $stmt->execute(['id' => (int) $_SESSION['user_id']]);
+            return (bool) $stmt->fetchColumn();
+        } catch (\Throwable $e) {
+            Logger::warning('auth.verificacao_sessao_falhou', [
+                'user_id' => (int) $_SESSION['user_id'],
+                'erro'    => $e->getMessage(),
+            ]);
+            return null;
+        }
+    }
+
+    /**
+     * Encerra a sessao quando o usuario da sessao nao existe mais no banco,
+     * avisando na tela de login. Chamado no front controller antes de
+     * qualquer consulta feita em nome do usuario.
+     */
+    public static function ensureValidSession(): void {
+        if (self::sessionUserExists() !== false) {
+            return;
+        }
+
+        $userId = (int) ($_SESSION['user_id'] ?? 0);
+        $email  = (string) ($_SESSION['user']->email ?? '');
+
+        Logger::warning('auth.sessao_orfa', [
+            'user_id' => $userId,
+            'email'   => $email,
+            'motivo'  => 'usuario nao existe em users (banco reimportado ou conta removida)',
+        ]);
+
+        // Mantem a sessao viva apenas para exibir o aviso no login.
+        $_SESSION = [];
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_regenerate_id(true);
+        }
+        Flash::set('error', 'Sua sessão era de um banco anterior (usuário #' . $userId
+            . ' não existe mais). Entre novamente para continuar.');
+
+        header('Location: /login');
+        exit;
+    }
+
     public static function user(): ?object {
         return $_SESSION['user'] ?? null;
     }

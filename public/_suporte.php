@@ -31,6 +31,7 @@ if (!Auth::check()) {
 $usuario = Auth::user();
 $userId  = (int) ($usuario->id ?? 0);
 $pdo     = Database::getInstance();
+$sessaoValida = Auth::sessionUserExists();
 
 $resultadoTeste = null;
 $codigoTeste    = '';
@@ -39,52 +40,69 @@ if (($_POST['acao'] ?? '') === 'teste') {
     $codigoTeste = Diagnostics::codigo();
     $passos = [];
 
-    // 1. Leitura simples
-    try {
-        $stmt = $pdo->prepare('SELECT COUNT(*) FROM accounts WHERE user_id = :id');
-        $stmt->execute(['id' => $userId]);
-        $passos[] = ['Leitura de contas', 'ok', (int) $stmt->fetchColumn() . ' conta(s)'];
-    } catch (Throwable $e) {
-        $passos[] = ['Leitura de contas', 'falhou', $e->getMessage()];
-    }
+    // 0. A sessao ainda corresponde a um usuario do banco?
+    $sessaoValida = Auth::sessionUserExists();
+    $passos[] = [
+        'Usuário da sessão no banco',
+        $sessaoValida === false ? 'falhou' : ($sessaoValida === true ? 'ok' : 'aviso'),
+        $sessaoValida === false
+            ? 'Usuário #' . $userId . ' não existe em users — sessão de um banco anterior'
+            : ($sessaoValida === true ? '#' . $userId . ' encontrado' : 'não foi possível verificar'),
+    ];
 
-    // 2. Gravação com as colunas básicas (estrutura antiga)
-    try {
-        $pdo->beginTransaction();
-        $stmt = $pdo->prepare(
-            'INSERT INTO accounts (user_id, name, account_type, initial_balance, current_balance, initial_date, status)
-             VALUES (:user_id, :name, :tipo, 0, 0, CURDATE(), :status)'
-        );
-        $stmt->execute(['user_id' => $userId, 'name' => '__TESTE_DIAGNOSTICO__', 'tipo' => 'checking', 'status' => 'inactive']);
-        $id = (int) $pdo->lastInsertId();
-        $pdo->rollBack();
-        $passos[] = ['Gravação básica de conta', 'ok', 'inseriu e desfez (id ' . $id . ')'];
-    } catch (Throwable $e) {
-        if ($pdo->inTransaction()) {
-            $pdo->rollBack();
+    if ($sessaoValida === false) {
+        $motivo = 'Sessão antiga: o usuário #' . $userId . ' não existe em users. Saia e entre novamente.';
+        $passos[] = ['Gravação básica de conta', 'falhou', $motivo];
+        $passos[] = ['Gravação completa (com campos de investimento)', 'falhou', $motivo];
+        Logger::warning('suporte.teste_gravacao.sessao_orfa', ['user_id' => $userId, 'codigo' => $codigoTeste]);
+    } else {
+        // 1. Leitura simples
+        try {
+            $stmt = $pdo->prepare('SELECT COUNT(*) FROM accounts WHERE user_id = :id');
+            $stmt->execute(['id' => $userId]);
+            $passos[] = ['Leitura de contas', 'ok', (int) $stmt->fetchColumn() . ' conta(s)'];
+        } catch (Throwable $e) {
+            $passos[] = ['Leitura de contas', 'falhou', $e->getMessage()];
         }
-        $passos[] = ['Gravação básica de conta', 'falhou', $e->getMessage()];
-    }
 
-    // 3. Gravação com as colunas da migration 0007
-    try {
-        $pdo->beginTransaction();
-        $stmt = $pdo->prepare(
-            'INSERT INTO accounts
-                (user_id, name, bank_name, bank_code, account_type, agency, account_number,
-                 investment_type_id, investment_rate, investment_rate_period,
-                 initial_balance, current_balance, initial_date, status, notes)
-             VALUES (:user_id, :name, NULL, NULL, :tipo, NULL, NULL, NULL, NULL, :periodo, 0, 0, CURDATE(), :status, NULL)'
-        );
-        $stmt->execute(['user_id' => $userId, 'name' => '__TESTE_DIAGNOSTICO__', 'tipo' => 'checking', 'periodo' => 'annual', 'status' => 'inactive']);
-        $id = (int) $pdo->lastInsertId();
-        $pdo->rollBack();
-        $passos[] = ['Gravação completa (com campos de investimento)', 'ok', 'inseriu e desfez (id ' . $id . ')'];
-    } catch (Throwable $e) {
-        if ($pdo->inTransaction()) {
+        // 2. Gravação com as colunas básicas (estrutura antiga)
+        try {
+            $pdo->beginTransaction();
+            $stmt = $pdo->prepare(
+                'INSERT INTO accounts (user_id, name, account_type, initial_balance, current_balance, initial_date, status)
+                 VALUES (:user_id, :name, :tipo, 0, 0, CURDATE(), :status)'
+            );
+            $stmt->execute(['user_id' => $userId, 'name' => '__TESTE_DIAGNOSTICO__', 'tipo' => 'checking', 'status' => 'inactive']);
+            $id = (int) $pdo->lastInsertId();
             $pdo->rollBack();
+            $passos[] = ['Gravação básica de conta', 'ok', 'inseriu e desfez (id ' . $id . ')'];
+        } catch (Throwable $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            $passos[] = ['Gravação básica de conta', 'falhou', $e->getMessage()];
         }
-        $passos[] = ['Gravação completa (com campos de investimento)', 'falhou', $e->getMessage()];
+
+        // 3. Gravação com as colunas da migration 0007
+        try {
+            $pdo->beginTransaction();
+            $stmt = $pdo->prepare(
+                'INSERT INTO accounts
+                    (user_id, name, bank_name, bank_code, account_type, agency, account_number,
+                     investment_type_id, investment_rate, investment_rate_period,
+                     initial_balance, current_balance, initial_date, status, notes)
+                 VALUES (:user_id, :name, NULL, NULL, :tipo, NULL, NULL, NULL, NULL, :periodo, 0, 0, CURDATE(), :status, NULL)'
+            );
+            $stmt->execute(['user_id' => $userId, 'name' => '__TESTE_DIAGNOSTICO__', 'tipo' => 'checking', 'periodo' => 'annual', 'status' => 'inactive']);
+            $id = (int) $pdo->lastInsertId();
+            $pdo->rollBack();
+            $passos[] = ['Gravação completa (com campos de investimento)', 'ok', 'inseriu e desfez (id ' . $id . ')'];
+        } catch (Throwable $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            $passos[] = ['Gravação completa (com campos de investimento)', 'falhou', $e->getMessage()];
+        }
     }
 
     // 4. Catálogos novos
@@ -205,6 +223,14 @@ $diagnosticoTexto = 'SOMASE — diagnóstico de ' . date('d/m/Y H:i') . PHP_EOL
     <h1>Suporte técnico</h1>
     <p class="lead">Confira o estado da sua conta no banco, teste a gravação e veja os últimos erros registrados.</p>
 
+    <?php if ($sessaoValida === false): ?>
+        <div class="msg err">
+            <strong>Sessão de um banco anterior.</strong> O usuário #<?= $userId ?> não existe na tabela
+            <code>users</code> deste banco — por isso todo cadastro falha na chave estrangeira
+            (<code>fk_accounts_user</code>). <a href="/logout">Sair e entrar novamente</a> resolve.
+        </div>
+    <?php endif; ?>
+
     <?php if ($pendentes !== []): ?>
         <div class="msg err">
             <strong>Banco desatualizado.</strong> Falta(m):
@@ -225,6 +251,7 @@ $diagnosticoTexto = 'SOMASE — diagnóstico de ' . date('d/m/Y H:i') . PHP_EOL
             <tr><td>Usuário</td><td>#<?= $userId ?> · <?= htmlspecialchars((string) ($usuario->name ?? '')) ?></td></tr>
             <tr><td>E-mail</td><td><?= htmlspecialchars((string) ($usuario->email ?? '')) ?></td></tr>
             <tr><td>Perfil</td><td><?= htmlspecialchars((string) ($usuario->role_slug ?? $usuario->role ?? '—')) ?></td></tr>
+            <tr><td>Usuário no banco</td><td class="<?= $sessaoValida === false ? 'bad' : 'ok' ?>"><?= $sessaoValida === false ? 'não encontrado (sessão antiga)' : ($sessaoValida === true ? 'encontrado' : 'não verificado') ?></td></tr>
             <tr><td>Código da requisição</td><td><code><?= htmlspecialchars(Logger::requestId()) ?></code></td></tr>
         </table>
     </div>
