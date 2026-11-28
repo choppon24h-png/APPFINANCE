@@ -1,7 +1,24 @@
 <?php
 use App\Core\Auth;
 use App\Core\Flash;
+use App\Core\Schema;
 $usuarioLogado = Auth::user();
+
+// Aviso de banco desatualizado: consulta no maximo a cada 5 minutos e
+// guarda na sessao para nao pesar nas paginas.
+$schemaPendentes = [];
+if (!isset($_SESSION['_schema_pend'], $_SESSION['_schema_pend_ts'])
+    || (time() - (int) $_SESSION['_schema_pend_ts']) > 300) {
+    try {
+        $schemaPendentes = Schema::pending();
+    } catch (\Throwable $e) {
+        $schemaPendentes = [];
+    }
+    $_SESSION['_schema_pend'] = $schemaPendentes;
+    $_SESSION['_schema_pend_ts'] = time();
+} elseif (is_array($_SESSION['_schema_pend'] ?? null)) {
+    $schemaPendentes = $_SESSION['_schema_pend'];
+}
 $uriAtual = strtok($_SERVER['REQUEST_URI'], '?');
 $flash = null;
 $flashPendentes = Flash::pull();
@@ -108,3 +125,14 @@ foreach (array_column(array_merge($menu, $menuAdmin), 0) as $hrefMenu) {
         </header>
         <main class="page-content">
             <?php if ($flash): ?><div class="flash flash-<?= htmlspecialchars($flash['type']) ?>" role="status"><?= htmlspecialchars($flash['message']) ?><button type="button" class="flash-close" data-dismiss aria-label="Fechar aviso">×</button></div><?php endif; ?>
+            <?php if ($schemaPendentes): ?>
+                <?php
+                $pend = $schemaPendentes[0];
+                $itens = array_slice($pend['missing'] ?? [], 0, 3);
+                $texto = ($pend['label'] ?? $pend['file'] ?? 'migration') . ($itens ? ' — falta ' . implode(', ', $itens) : '');
+                ?>
+                <div class="flash flash-error" role="alert">
+                    <strong>Banco desatualizado:</strong> <?= htmlspecialchars($texto) ?>.
+                    <a href="/_atualizar.php" style="color:inherit;text-decoration:underline">Abrir atualizador</a>
+                </div>
+            <?php endif; ?>

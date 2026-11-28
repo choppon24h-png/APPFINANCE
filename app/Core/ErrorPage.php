@@ -154,8 +154,8 @@ HTML;
         self::render(
             503,
             'Banco de dados precisa ser atualizado',
-            'O sistema já está na versão nova, mas o banco ainda não recebeu a atualização da etapa de acesso.' . $detalhe,
-            'Abra /_atualizar.php neste domínio (logado como administrador) e clique em “Aplicar atualização do banco”. O procedimento é seguro e pode ser repetido quantas vezes precisar.',
+            'O sistema já está na versão nova, mas o banco ainda não recebeu uma migration.' . $detalhe,
+            'Abra /_atualizar.php neste domínio (logado como administrador) e clique em “Aplicar migrations pendentes”. O procedimento só adiciona tabelas/colunas e catálogos: não apaga dados e pode ser repetido.',
             [],
             ['Abrir atualizador' => '/_atualizar.php', 'Ver logs' => '/_logs.php', 'Ir para o login' => '/login'],
             $ref

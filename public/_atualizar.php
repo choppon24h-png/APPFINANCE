@@ -3,8 +3,8 @@
  * SOMASE — Diagnóstico e atualização do banco (hospedagem compartilhada).
  *
  * Mostra o estado do ambiente (PHP, .env, banco, schema, permissões de
- * escrita, últimos erros do log) e aplica a migration 0004 quando ela
- * ainda não foi executada.
+ * escrita, volume de dados e últimos erros do log) e aplica TODAS as
+ * migrations pendentes em `database/migrations/` (0004, 0005, 0006, 0007...).
  *
  * Acesso: logado como administrador OU com a chave do .env:
  *   https://seu-dominio.com/_atualizar.php   (formulário pede APP_SECRET)
@@ -18,6 +18,8 @@ const BASE_PATH = __DIR__ . '/..';
 header('X-Robots-Tag: noindex, nofollow');
 header('Content-Type: text/html; charset=utf-8');
 header('Cache-Control: no-store');
+
+@set_time_limit(180);
 
 $envFile = BASE_PATH . '/.env';
 $env = [];
@@ -96,55 +98,184 @@ if (!$autorizado && !empty($_SESSION['_diag_ok'])) {
 // ── Token do formulário ───────────────────────────────────────────────────────
 $token = hash('sha256', ($appSecret !== '' ? $appSecret : 'sem-secret') . session_id());
 
-// ── Aplicar migration 0004 ────────────────────────────────────────────────────
+// ── Migrations conhecidas (as mesmas sentinelas de App\Core\Schema) ──────────
+const MIGRACOES = [
+    '0004_user_registration.sql' => [
+        'label'   => '0004 — acesso, login social e painel',
+        'tables'  => ['user_identities', 'auth_attempts'],
+        'columns' => ['users' => ['birth_date', 'auth_provider', 'avatar_url', 'email_verified_at', 'terms_accepted_at', 'registration_ip']],
+        'seeds'   => [['permissions', 'slug', 'access_admin_panel']],
+    ],
+    '0005_banks.sql' => [
+        'label'   => '0005 — catálogo de bancos',
+        'tables'  => ['banks'],
+        'minRows' => ['banks' => 100],
+    ],
+    '0006_documents_properties.sql' => [
+        'label'   => '0006 — documentos, imóveis e importação',
+        'columns' => [
+            'cost_centers' => ['kind', 'address', 'identifiers'],
+            'transactions' => ['document_code', 'import_ref', 'attachment_path'],
+        ],
+    ],
+    '0007_cep_payments_investments.sql' => [
+        'label'   => '0007 — CEP, formas de pagamento e investimentos',
+        'tables'  => ['payment_methods', 'investment_types'],
+        'columns' => [
+            'cost_centers' => ['zip_code', 'street', 'address_number', 'complement', 'neighborhood', 'city', 'state'],
+            'investments'  => ['investment_type_id', 'benchmark_rate', 'rate_period'],
+            'accounts'     => ['investment_type_id', 'investment_rate', 'investment_rate_period'],
+        ],
+    ],
+];
+
+/**
+ * Lê tabelas e colunas do banco uma única vez.
+ * @return array{tables:array<int,string>,columns:array<string,array<int,string>>}
+ */
+function lerSchema(PDO $pdo): array
+{
+    $tabelas = [];
+    $colunas = [];
+    try {
+        $stmt = $pdo->query('SELECT TABLE_NAME, COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE()');
+        foreach ($stmt->fetchAll() as $linha) {
+            $tabela = strtolower((string) $linha['TABLE_NAME']);
+            $tabelas[$tabela] = true;
+            $colunas[$tabela][] = strtolower((string) $linha['COLUMN_NAME']);
+        }
+    } catch (Throwable $e) {
+        // banco sem permissão no information_schema: segue com o que tem
+    }
+    return ['tables' => array_keys($tabelas), 'columns' => $colunas];
+}
+
+/**
+ * Compara as sentinelas com o banco.
+ * @return array<string,array<int,string>> arquivo => pendências
+ */
+function pendencias(array $schema): array
+{
+    $resultado = [];
+    foreach (MIGRACOES as $arquivo => $m) {
+        $faltando = [];
+        foreach ($m['tables'] ?? [] as $tabela) {
+            if (!in_array($tabela, $schema['tables'], true)) {
+                $faltando[] = 'tabela ' . $tabela;
+            }
+        }
+        foreach ($m['columns'] ?? [] as $tabela => $cols) {
+            if (!in_array($tabela, $schema['tables'], true)) {
+                $faltando[] = 'tabela ' . $tabela;
+                continue;
+            }
+            $existentes = $schema['columns'][$tabela] ?? [];
+            foreach ($cols as $col) {
+                if (!in_array(strtolower($col), $existentes, true)) {
+                    $faltando[] = $tabela . '.' . $col;
+                }
+            }
+        }
+        $resultado[$arquivo] = $faltando;
+    }
+    return $resultado;
+}
+
+/**
+ * Executa um arquivo .sql statement por statement, tolerando o que já existe.
+ * @return array{0:int,1:int,2:array<int,string>} [aplicados, ignorados, erros]
+ */
 function aplicarSql(PDO $pdo, string $arquivo): array
 {
-    $ok = 0;
-    $erros = [];
     if (!is_file($arquivo)) {
-        return [0, ['arquivo não encontrado: ' . basename($arquivo)]];
+        return [0, 0, ['arquivo não encontrado: ' . basename($arquivo)]];
     }
-    $sql = preg_replace('/^--.*$/m', '', (string) file_get_contents($arquivo));
+
+    $sql = (string) file_get_contents($arquivo);
+    $sql = preg_replace('/^\s*--.*$/m', '', $sql);       // comentários de linha
+    $sql = preg_replace('/^\s*#.*$/m', '', $sql);        // comentários #
+    $sql = preg_replace('#/\*.*?\*/#s', '', $sql);       // comentários de bloco
+
+    $aplicados = 0;
+    $ignorados = 0;
+    $erros = [];
+
     foreach (array_filter(array_map('trim', explode(';', $sql))) as $stmt) {
-        if ($stmt === '') {
+        if ($stmt === '' || strtoupper($stmt) === 'DO 0') {
             continue;
         }
         try {
             $pdo->exec($stmt);
-            $ok++;
+            $aplicados++;
         } catch (Throwable $e) {
-            if (preg_match('/duplicate column|duplicate key name|already exists|Duplicate entry/i', $e->getMessage())) {
-                $ok++;
+            $msg = $e->getMessage();
+            if (preg_match('/duplicate column|duplicate key name|already exists|Duplicate entry|check that column\/key exists/i', $msg)) {
+                $ignorados++;
                 continue;
             }
-            $erros[] = mb_substr($e->getMessage(), 0, 200);
+            if (str_contains($msg, 'errno: 121')) {
+                $msg .= ' — nome de constraint duplicado: existe uma tabela de backup com o mesmo nome de chave estrangeira. Apague a tabela de backup e aplique de novo.';
+            } elseif (str_contains($msg, 'errno: 150')) {
+                $msg .= ' — chave estrangeira sem tabela de origem: verifique se as migrations anteriores (0003) foram aplicadas.';
+            }
+            $erros[] = mb_substr($msg, 0, 320);
         }
     }
-    return [$ok, $erros];
+
+    return [$aplicados, $ignorados, $erros];
 }
+
+/** Grava uma linha no log diário do app (mesmo formato do Logger). */
+function registrarLog(string $nivel, string $mensagem, array $contexto = []): void
+{
+    $linha = '[' . date('Y-m-d H:i:s') . '] [' . $nivel . '] [DIAG] ' . $mensagem
+        . ($contexto ? ' | ' . json_encode($contexto, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) : '')
+        . PHP_EOL;
+    @file_put_contents(BASE_PATH . '/storage/logs/app-' . date('Y-m-d') . '.log', $linha, FILE_APPEND | LOCK_EX);
+}
+
+// ── Aplicar migrations pendentes ─────────────────────────────────────────────
+$schema = $pdo ? lerSchema($pdo) : ['tables' => [], 'columns' => []];
+$pend = $pdo ? pendencias($schema) : [];
+$pendentes = array_keys(array_filter($pend, static fn (array $f): bool => $f !== []));
 
 if ($autorizado && $pdo && ($_POST['acao'] ?? '') === 'aplicar') {
     if (!hash_equals($token, (string) ($_POST['token'] ?? ''))) {
         $erro = 'Sessão expirada. Recarregue a página e tente novamente.';
     } else {
         $totalErros = 0;
-        foreach (['0004_user_registration.sql', '0005_banks.sql'] as $arquivo) {
-            [$ok, $erros] = aplicarSql($pdo, BASE_PATH . '/database/migrations/' . $arquivo);
-            $mensagens[] = $arquivo . ': ' . $ok . ' comando(s) aplicado(s).';
+        $paraAplicar = $pendentes !== [] ? $pendentes : [];
+        if ($paraAplicar === []) {
+            $mensagens[] = 'Nenhuma migration pendente: o banco já está atualizado.';
+        }
+        foreach ($paraAplicar as $arquivo) {
+            $caminho = BASE_PATH . '/database/migrations/' . $arquivo;
+            [$aplicados, $ignorados, $erros] = aplicarSql($pdo, $caminho);
+            $mensagens[] = $arquivo . ': ' . $aplicados . ' comando(s) aplicado(s)'
+                . ($ignorados ? ', ' . $ignorados . ' já existente(s)' : '') . '.';
             foreach ($erros as $e) {
                 $mensagens[] = 'Falha em ' . $arquivo . ': ' . $e;
                 $totalErros++;
             }
+            registrarLog('INFO', 'migration.aplicada', [
+                'arquivo' => $arquivo, 'aplicados' => $aplicados,
+                'ignorados' => $ignorados, 'erros' => $erros,
+            ]);
         }
-        if ($totalErros === 0) {
-            $mensagens[] = 'Atualização concluída. Recarregue o sistema e teste o cadastro, o painel e o campo de banco.';
+
+        $schema = lerSchema($pdo);
+        $pend = pendencias($schema);
+        $restantes = array_keys(array_filter($pend, static fn (array $f): bool => $f !== []));
+
+        unset($_SESSION['_schema_pend'], $_SESSION['_schema_pend_ts']);
+
+        if ($totalErros === 0 && $restantes === []) {
+            $mensagens[] = 'Atualização concluída. Recarregue o sistema e teste as telas.';
+            registrarLog('INFO', 'migration.concluida', ['migrations' => $paraAplicar]);
+        } elseif ($restantes !== []) {
+            $mensagens[] = 'Ainda pendente: ' . implode(', ', $restantes) . '. Veja os erros acima.';
+            registrarLog('WARNING', 'migration.incompleta', ['pendentes' => $restantes, 'erros' => $totalErros]);
         }
-        @file_put_contents(
-            BASE_PATH . '/storage/logs/app-' . date('Y-m-d') . '.log',
-            '[' . date('Y-m-d H:i:s') . '] [INFO] Migration 0004 aplicada via _atualizar.php | '
-                . json_encode(['comandos' => $ok, 'erros' => $erros], JSON_UNESCAPED_UNICODE) . PHP_EOL,
-            FILE_APPEND
-        );
     }
 }
 
@@ -160,61 +291,35 @@ $checks[] = ['Conexão com o banco', $dbErro !== '' ? $dbErro : 'ok', $dbErro ==
 if ($pdo) {
     try {
         $checks[] = ['Versão do banco', (string) $pdo->query('SELECT VERSION()')->fetchColumn(), true];
+        $checks[] = ['Banco em uso', (string) $pdo->query('SELECT DATABASE()')->fetchColumn(), true];
     } catch (Throwable $e) {
         $checks[] = ['Versão do banco', $e->getMessage(), false];
     }
 }
-foreach (['storage/logs', 'storage/sessions', 'storage/uploads'] as $dir) {
+foreach (['storage/logs', 'storage/sessions', 'storage/uploads', 'storage/cache/cep'] as $dir) {
     $path = BASE_PATH . '/' . $dir;
     $okDir = is_dir($path) && is_writable($path);
     $checks[] = ['Escrita em ' . $dir, $okDir ? 'ok' : 'SEM PERMISSÃO', $okDir];
 }
 
-$faltando = [];
+// ── Volume de dados (para detectar banco recriado/vazio) ─────────────────────
+$contagens = [];
 if ($pdo) {
-    try {
-        $banco = (string) ($env['DB_DATABASE'] ?? '');
-        $stmt = $pdo->prepare('SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = :b');
-        $stmt->execute(['b' => $banco]);
-        $tabelas = array_map('strtolower', $stmt->fetchAll(PDO::FETCH_COLUMN));
-        foreach (['user_identities', 'auth_attempts', 'banks'] as $t) {
-            if (!in_array($t, $tabelas, true)) {
-                $faltando[] = 'tabela ' . $t;
-            }
+    foreach (['users', 'accounts', 'categories', 'cost_centers', 'transactions', 'investments', 'payment_methods', 'investment_types'] as $tabela) {
+        if (!in_array($tabela, $schema['tables'], true)) {
+            $contagens[$tabela] = null;
+            continue;
         }
-        $stmt = $pdo->prepare("SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = :b AND TABLE_NAME = 'users'");
-        $stmt->execute(['b' => $banco]);
-        $colunas = array_map('strtolower', $stmt->fetchAll(PDO::FETCH_COLUMN));
-        foreach (['birth_date', 'auth_provider', 'avatar_url', 'email_verified_at', 'terms_accepted_at', 'registration_ip'] as $c) {
-            if (!in_array($c, $colunas, true)) {
-                $faltando[] = 'users.' . $c;
-            }
+        try {
+            $contagens[$tabela] = (int) $pdo->query('SELECT COUNT(*) FROM `' . $tabela . '`')->fetchColumn();
+        } catch (Throwable $e) {
+            $contagens[$tabela] = null;
         }
-        $stmt = $pdo->prepare("SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = :b AND TABLE_NAME = 'accounts'");
-        $stmt->execute(['b' => $banco]);
-        $colunasContas = array_map('strtolower', $stmt->fetchAll(PDO::FETCH_COLUMN));
-        if (!in_array('bank_code', $colunasContas, true)) {
-            $faltando[] = 'accounts.bank_code';
-        }
-        if (in_array('banks', $tabelas, true)) {
-            $totalBancos = (int) $pdo->query('SELECT COUNT(*) FROM banks')->fetchColumn();
-            if ($totalBancos < 100) {
-                $faltando[] = 'catalogo de bancos incompleto (' . $totalBancos . ')';
-            }
-        }
-        if (in_array('permissions', $tabelas, true)) {
-            $tem = (int) $pdo->query("SELECT COUNT(*) FROM permissions WHERE slug = 'access_admin_panel'")->fetchColumn();
-            if ($tem === 0) {
-                $faltando[] = 'permissão access_admin_panel';
-            }
-        }
-        $checks[] = ['Migration 0004 (acesso)', $faltando ? 'PENDENTE: ' . implode(', ', $faltando) : 'aplicada', !$faltando];
-    } catch (Throwable $e) {
-        $checks[] = ['Migration 0004 (acesso)', $e->getMessage(), false];
     }
 }
+$semDados = $pdo && ($contagens['transactions'] ?? null) === 0 && ($contagens['accounts'] ?? null) === 0;
 
-// Últimos erros do log (arquivos diarios app-AAAA-MM-DD.log + legado app.log)
+// Últimos erros do log (arquivos diários app-AAAA-MM-DD.log + legado app.log)
 $logLinhas = [];
 $arquivosLog = glob(BASE_PATH . '/storage/logs/app-*.log') ?: [];
 usort($arquivosLog, static fn ($a, $b) => filemtime($b) <=> filemtime($a));
@@ -253,8 +358,9 @@ foreach ($arquivosLog as $logPath) {
     .card { background: linear-gradient(180deg, rgba(18,37,74,.92), rgba(9,20,40,.96));
         border: 1px solid #1f3560; border-radius: 16px; padding: 18px 20px; }
     table { width: 100%; border-collapse: collapse; }
-    td { padding: 8px 6px; border-bottom: 1px solid rgba(31,53,96,.7); vertical-align: top; }
+    td, th { padding: 8px 6px; border-bottom: 1px solid rgba(31,53,96,.7); vertical-align: top; text-align: left; }
     td:first-child { color: #9db6d8; width: 44%; }
+    th { color: #9db6d8; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }
     tr:last-child td { border-bottom: 0; }
     .ok { color: #7ee08a; font-weight: 700; }
     .bad { color: #ff9aa8; font-weight: 700; }
@@ -269,13 +375,16 @@ foreach ($arquivosLog as $logPath) {
     pre { margin: 0; padding: 14px; background: #050b16; border: 1px solid #1f3560; border-radius: 12px;
         font-size: 11px; line-height: 1.5; color: #9db6d8; white-space: pre-wrap; word-break: break-word; max-height: 360px; overflow: auto; }
     .foot { margin-top: 26px; font-size: 11px; color: #6d82a6; }
+    .pill { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 11px; font-weight: 700; }
+    .pill.ok { background: rgba(67,193,58,.16); color: #7ee08a; }
+    .pill.bad { background: rgba(255,93,115,.16); color: #ff9aa8; }
 </style>
 </head>
 <body>
 <div class="wrap">
     <img class="brand" src="/assets/brand/somase-logo-horizontal-light.png" alt="SOMASE">
     <h1>Diagnóstico do servidor</h1>
-    <p class="lead">Verifica o ambiente, o banco e aplica a atualização da etapa de acesso (migration 0004).</p>
+    <p class="lead">Verifica o ambiente, o banco e aplica todas as migrations pendentes (0004 a 0007).</p>
 
     <?php if ($erro !== ''): ?>
         <div class="msg err"><?= htmlspecialchars($erro) ?></div>
@@ -294,8 +403,7 @@ foreach ($arquivosLog as $logPath) {
         $statusBanco = (string) preg_replace('/\b\d{1,3}(?:\.\d{1,3}){3}\b/', '***', $statusBanco);
         $statusBanco = mb_substr($statusBanco, 0, 240);
     }
-    ?>
-    <?php
+
     // Teste real de leitura na tabela users: é o que falha no 500 do login.
     $testeUsers = 'não executado';
     $testeUsersOk = null;
@@ -342,6 +450,68 @@ foreach ($arquivosLog as $logPath) {
         <p class="foot">Acesso liberado por: <?= htmlspecialchars($motivoAuth) ?>.
             · <a href="/_logs.php" style="color:#8fb6ff;font-weight:700">Ver logs do sistema</a></p>
 
+        <h2>Migrations do banco</h2>
+        <div class="card">
+            <?php if (!$pdo): ?>
+                <p class="bad">Sem conexão com o banco: não é possível verificar as migrations.</p>
+            <?php else: ?>
+                <table>
+                    <tr><th>Migration</th><th>Status</th></tr>
+                    <?php foreach (MIGRACOES as $arquivo => $m): ?>
+                        <?php $faltando = $pend[$arquivo] ?? []; ?>
+                        <tr>
+                            <td><?= htmlspecialchars($m['label']) ?><br><code><?= htmlspecialchars($arquivo) ?></code></td>
+                            <td>
+                                <?php if ($faltando === []): ?>
+                                    <span class="pill ok">aplicada</span>
+                                <?php else: ?>
+                                    <span class="pill bad">pendente</span><br>
+                                    <small><?= htmlspecialchars(implode(', ', array_slice($faltando, 0, 6))) ?></small>
+                                <?php endif; ?>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                </table>
+
+                <?php if ($pendentes !== []): ?>
+                    <form method="post">
+                        <input type="hidden" name="acao" value="aplicar">
+                        <input type="hidden" name="token" value="<?= htmlspecialchars($token) ?>">
+                        <button class="btn" type="submit">Aplicar <?= count($pendentes) ?> migration(s) pendente(s)</button>
+                    </form>
+                    <p class="foot">Executa, nesta ordem: <code><?= htmlspecialchars(implode('</code>, <code>', $pendentes)) ?></code>. É seguro repetir: nada é apagado.</p>
+                <?php else: ?>
+                    <div class="msg ok" style="margin-bottom:0">Banco atualizado: nenhuma migration pendente.</div>
+                <?php endif; ?>
+            <?php endif; ?>
+        </div>
+
+        <?php if ($pdo): ?>
+            <h2>Seus dados</h2>
+            <div class="card">
+                <table>
+                    <?php foreach ($contagens as $tabela => $total): ?>
+                        <tr>
+                            <td><?= htmlspecialchars($tabela) ?></td>
+                            <td class="<?= $total === null ? 'bad' : 'ok' ?>">
+                                <?= $total === null ? 'tabela ausente' : (int) $total . ' registro(s)' ?>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                </table>
+                <?php if ($semDados): ?>
+                    <div class="msg err" style="margin-bottom:0">
+                        <strong>Atenção:</strong> não há contas nem lançamentos neste banco. Se você tinha dados e importou
+                        <code>database/sql/somase_instalacao_completa.sql</code>, esse arquivo <strong>apaga as tabelas</strong> antes de criar.
+                        Restaure o backup mais recente pelo cPanel (Arquivos → Backup) e use, para atualizar,
+                        <code>database/migrations/0007_cep_payments_investments.sql</code> ou <code>somase_atualizar_banco.sql</code>.
+                    </div>
+                <?php else: ?>
+                    <p class="foot" style="margin-bottom:0">Para atualizar um banco com dados, use sempre as migrations (ou <code>somase_atualizar_banco.sql</code>), nunca o arquivo de instalação completa.</p>
+                <?php endif; ?>
+            </div>
+        <?php endif; ?>
+
         <h2>Ambiente</h2>
         <div class="card">
             <table>
@@ -353,21 +523,6 @@ foreach ($arquivosLog as $logPath) {
                 <?php endforeach; ?>
             </table>
         </div>
-
-        <?php if ($pdo && $faltando): ?>
-            <h2>Atualizar o banco</h2>
-            <div class="card">
-                <p>Faltam: <strong><?= htmlspecialchars(implode(', ', $faltando)) ?></strong>.</p>
-                <form method="post">
-                    <input type="hidden" name="acao" value="aplicar">
-                    <input type="hidden" name="token" value="<?= htmlspecialchars($token) ?>">
-                    <button class="btn" type="submit">Aplicar atualização do banco</button>
-                </form>
-                <p class="foot">Executa apenas <code>database/migrations/0004_user_registration.sql</code>. É seguro repetir.</p>
-            </div>
-        <?php elseif ($pdo): ?>
-            <div class="msg ok">Banco atualizado: nenhuma pendência encontrada.</div>
-        <?php endif; ?>
 
         <h2>Últimos erros registrados</h2>
         <div class="card">
