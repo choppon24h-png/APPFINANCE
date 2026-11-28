@@ -956,6 +956,25 @@ ON CONFLICT ("compe") DO UPDATE SET "name" = EXCLUDED."name", "full_name" = EXCL
 
 SELECT COUNT(*) AS bancos_carregados FROM "banks";
 
+-- ===== 0006_documents_properties.sql =====
+ALTER TABLE "cost_centers" ADD COLUMN IF NOT EXISTS "kind" varchar(20) NOT NULL DEFAULT 'general';
+
+ALTER TABLE "cost_centers" ADD COLUMN IF NOT EXISTS "address" varchar(255) NULL;
+
+ALTER TABLE "cost_centers" ADD COLUMN IF NOT EXISTS "identifiers" varchar(500) NULL;
+
+ALTER TABLE "transactions" ADD COLUMN IF NOT EXISTS "document_code" varchar(64) NULL;
+
+ALTER TABLE "transactions" ADD COLUMN IF NOT EXISTS "import_ref" varchar(100) NULL;
+
+ALTER TABLE "transactions" ADD COLUMN IF NOT EXISTS "attachment_path" varchar(255) NULL;
+
+CREATE INDEX IF NOT EXISTS "idx_transactions_document" ON "transactions" ("user_id", "document_code");
+
+CREATE INDEX IF NOT EXISTS "idx_transactions_import" ON "transactions" ("user_id", "account_id", "import_ref");
+
+CREATE INDEX IF NOT EXISTS "idx_cost_centers_kind" ON "cost_centers" ("user_id", "kind");
+
 -- ------------------------------------------------------------
 -- ajusta as sequences de identity apos cargas com id explicito
 -- ------------------------------------------------------------

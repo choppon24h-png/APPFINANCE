@@ -178,3 +178,11 @@ Vá em `https://seu-dominio.com.br/login`.
 - Troque a senha do `admin@example.com`.
 - Se não for usar multi-tenant, você pode remover `tenants`/`user_tenants`
   e as rotas de "selecionar empresa" (veja o `README.md`).
+
+## Rodada 27/11/2026 — documentos, imóveis e lote
+
+1. **Banco primeiro**: importe `database/migrations/0006_documents_properties.sql` no phpMyAdmin (banco `inlaud99_appfinance`). Pode rodar duas vezes: a segunda não faz nada.
+2. Envie os arquivos alterados (veja a lista no relatório da rodada), incluindo `app/Services/Documents/`, `app/Controllers/DocumentController.php`, `app/Controllers/ImportController.php`, as views novas e `public/assets/js/documents.js` e `import.js`.
+3. Crie `storage/uploads` com permissão **775** (fora de `public_html`, como `storage/logs`).
+4. Confira no `.env`: `ATTACHMENT_MAX_MB=10`; opcionalmente `OCR_SPACE_API_KEY` e `OCR_SPACE_ENGINE=2`.
+5. Teste: abrir `/lancamentos/novo`, colar um código de boleto e conferir valor/vencimento; importar um OFX pequeno; abrir um anexo e confirmar que **sem login** a rota redireciona para `/login`.

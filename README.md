@@ -147,3 +147,55 @@ O repositório `ASOARESBH/phppadrao` foi usado apenas como origem da base. O des
 | `somase_completo_com_demo.sql` | homologação e testes | dump completo do banco de desenvolvimento (4 usuários de teste, 2 contas, 101 lançamentos, investimentos e logs). **Não usar em produção.** |
 
 Todos terminam com consultas `SELECT` de verificação, então o phpMyAdmin mostra na tela o resultado da importação. Os arquivos são gerados por `tools/build_sql.py` a partir do banco local.
+
+## Leitura de documentos, imóveis e lançamento em lote (27/11/2026)
+
+Esta rodada adiciona três frentes que conversam entre si:
+
+### 1. Ler boleto, conta ou cupom em `/lancamentos/novo`
+- O card **Ler boleto, conta ou cupom** aceita PDF, foto (inclusive câmera do celular) ou o código digitado.
+- O OCR roda **no navegador**: `pdf.js 3.11.174` (texto do PDF e render da 1ª página), `@zxing/library 0.23.0` (QR Code e ITF do boleto) e `tesseract.js 5.1.1` (texto da imagem). As três bibliotecas só são baixadas quando o usuário escolhe um arquivo (jsDelivr com versão fixa).
+- O texto/código é interpretado no servidor por `POST /lancamentos/ler-documento` (JSON), que devolve a sugestão de lançamento: valor, vencimento, beneficiário, CNPJ, categoria, imóvel, código e avisos.
+- Regras implementadas em `app/Services/Documents/`:
+  - **Boleto bancário**: linha de 47 dígitos (mód. 10 por campo + mód. 11 geral) ou código de barras de 44; valor e fator de vencimento saem do código. Fator reiniciado em 1000 no dia 22/02/2025 (FEBRABAN) — a data escolhida é a mais próxima de hoje.
+  - **Arrecadação/convênio** (água, luz, gás, telefone, IPTU): linha de 48 dígitos começando com 8 (DVs por bloco) ou 44 sem DVs; valor nas posições 5–15 e segmento (1 a 7) identificado.
+  - **NFC-e/NF-e**: chave de 44 dígitos (modelo 55/65), CNPJ do emitente e nº da nota; valor total vem do texto do cupom.
+  - **Imóvel**: o número de instalação/medidor cadastrado em `cost_centers.identifiers` é procurado no texto; se o usuário tem um único imóvel, ele já vem selecionado.
+  - **Duplicidade**: se o `document_code` já existe para o usuário, a resposta traz `duplicate: true` e o formulário avisa.
+- Fallback opcional **OCR.space**: `POST /lancamentos/ler-documento/ocr` (multipart, até 1 MB). A chave fica no `.env` (`OCR_SPACE_API_KEY`), nunca no JavaScript.
+
+### 2. Anexos privados
+- Upload no próprio formulário (`enctype="multipart/form-data"`), validado por `finfo` (PDF/JPG/PNG/WEBP/HEIC/TIFF) e limitado por `ATTACHMENT_MAX_MB` (padrão 10 MB).
+- Gravado fora de `public/`, em `storage/uploads/u{id}/AAAA/MM/{24 hex}.{ext}`.
+- Entrega somente por `GET /lancamentos/{id}/anexo` (dono do lançamento), com `X-Content-Type-Options: nosniff` e `Content-Security-Policy: sandbox`; `?baixar=1` força download. Excluir o lançamento apaga o arquivo.
+- O service worker ignora essa rota (nada de cache de documento privado).
+
+### 3. Lançamento em lote em `/lancamentos/importar`
+- Aceita **OFX** (SGML/XML, Windows-1252, FITID) e **CSV** (separador `;`, `,` ou tab; BOM; colunas data/descrição/valor ou débito/crédito; linhas de saldo ignoradas).
+- Prévia (`POST /lancamentos/importar/extrato`) marca `imported` (FITID/hash já usado), `similar` (mesma conta, data e valor) e sugere categoria/centro de custo pelas descrições já usadas pelo usuário.
+- Grade de revisão responsiva (360 px ok) com incluir/desincluir, edição de data, descrição, valor, tipo, categoria e imóvel.
+- `POST /lancamentos/importar/confirmar` grava até 300 linhas, com erro por linha, `import_ref` único e auditoria (`import_preview`, `import`).
+
+### 4. Imóveis e centros de custo (`/centros-custo`)
+- `cost_centers.kind` (`property`, `vehicle`, `company`, `project`, `general`), `address` e `identifiers` (instalação/medidor/matrícula, separados por vírgula).
+- Pílulas de tipo no formulário, campos de endereço/identificadores só para imóvel, cartões de imóvel com total do mês e atalho para `/lancamentos?cost_center_id=…&date_from=…&date_to=…`.
+- Filtros `?tipo=property` na lista e `center_kind=property` em `/lancamentos`; a lista mostra o imóvel e o 📎 do anexo.
+
+### Migration e ordem de deploy
+- A migration desta rodada é **`database/migrations/0006_documents_properties.sql`**. O pedido citava `0005_documents_properties.sql`, mas a **0005 já é a de bancos** (`0005_banks.sql`); renumerar evitou colisão.
+- Ela é idempotente (consulta `information_schema` + `PREPARE/EXECUTE`), pode ser importada duas vezes no phpMyAdmin sem erro e não altera dados existentes (centros antigos viram `kind = 'general'`).
+- **Ordem obrigatória**: 1) importar a migration no MySQL de produção; 2) enviar os arquivos; 3) conferir permissão de escrita em `storage/uploads`.
+- Versão PostgreSQL regenerada por `python3 tools/build_postgres_sql.py --validar` (o gerador agora entende o padrão `information_schema` + `PREPARE` e produz `ADD COLUMN IF NOT EXISTS` / `CREATE INDEX IF NOT EXISTS`).
+
+### Novas variáveis de ambiente
+```
+ATTACHMENT_MAX_MB=10
+OCR_SPACE_API_KEY=
+OCR_SPACE_ENGINE=2
+```
+
+### Testes desta rodada
+```
+php tests/DocumentsTest.php      # 62 verificações, sem banco
+bash tools/validar_tudo.sh       # PHP, JS, paridade SQL e smoke test
+```

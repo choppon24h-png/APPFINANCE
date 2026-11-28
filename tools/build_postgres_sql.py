@@ -485,8 +485,35 @@ def converter_alter(sql: str) -> list[str]:
 # --------------------------------------------------------------------------
 # conversao de arquivo completo
 # --------------------------------------------------------------------------
+def expandir_blocos_condicionais(sql: str) -> str:
+    """Troca o padrao MySQL information_schema + PREPARE pelo DDL equivalente.
+
+    As migrations usam:
+        SET @has := (SELECT COUNT(*) FROM information_schema...);
+        SET @sql := IF(@has = 0, 'ALTER TABLE ...', 'DO 0');
+        PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+    O PostgreSQL nao tem PREPARE de DDL; como o conversor ja gera
+    "ADD COLUMN IF NOT EXISTS" e "CREATE INDEX IF NOT EXISTS", basta extrair
+    o ALTER de dentro do IF e descartar o resto.
+    """
+    padrao = re.compile(
+        r"SET\s+@sql\s*:=\s*IF\([^,]+,\s*'((?:[^']|'')*)'\s*,\s*'(?:[^']|'')*'\s*\)\s*;"
+        r"\s*PREPARE\s+\w+\s+FROM\s+@sql\s*;\s*EXECUTE\s+\w+\s*;\s*DEALLOCATE\s+PREPARE\s+\w+\s*;",
+        re.I | re.S,
+    )
+
+    def trocar(m: re.Match) -> str:
+        return m.group(1).replace("''", "'") + ";"
+
+    sql = padrao.sub(trocar, sql)
+    # Sobras (blocos sem PREPARE, por exemplo) nao podem virar SQL invalido.
+    sql = re.sub(r"^\s*(PREPARE|EXECUTE|DEALLOCATE)\b[^;]*;\s*$", "", sql, flags=re.I | re.M)
+    return sql
+
+
 def converter_arquivo(caminho: pathlib.Path, unicos: dict[str, list[list[str]]]) -> str:
     sql = caminho.read_text(encoding="utf-8")
+    sql = expandir_blocos_condicionais(sql)
     sql = re.sub(r"/\*![\s\S]*?\*/", "", sql)
     comandos = dividir_statements(sql)
     saida: list[str] = []
