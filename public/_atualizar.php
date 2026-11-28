@@ -480,6 +480,7 @@ foreach ($arquivosLog as $logPath) {
                         <button class="btn" type="submit">Aplicar <?= count($pendentes) ?> migration(s) pendente(s)</button>
                     </form>
                     <p class="foot">Executa, nesta ordem: <code><?= htmlspecialchars(implode('</code>, <code>', $pendentes)) ?></code>. É seguro repetir: nada é apagado.</p>
+                    <p class="foot">Sem acesso a esta tela? Importe <code>database/sql/somase_mysql_unico.sql</code> no phpMyAdmin — ele também só cria o que falta.</p>
                 <?php else: ?>
                     <div class="msg ok" style="margin-bottom:0">Banco atualizado: nenhuma migration pendente.</div>
                 <?php endif; ?>

@@ -198,3 +198,9 @@ Vá em `https://seu-dominio.com.br/login`.
 2. Abra `/_atualizar.php` logado como administrador e clique em **Aplicar migrations pendentes**. Ele detecta 0004, 0005, 0006 e 0007 e executa só o que falta.
 3. Confira a seção **Seus dados**. Se contas e lançamentos estiverem zerados, o banco foi recriado (uso indevido de `somase_instalacao_completa.sql`): restaure o backup do cPanel antes de continuar.
 4. Enquanto a migration não for aplicada, o sistema segue no ar com o aviso "Banco desatualizado" no topo e as formas de pagamento antigas.
+## Arquivo único do MySQL (recomendado)
+`database/sql/somase_mysql_unico.sql` serve para banco novo **e** para banco com dados. Ele não tem `DROP`, `TRUNCATE` nem `DELETE`: cria as tabelas que faltarem, aplica as migrations 0004 a 0007, carrega perfis, permissões, bancos, categorias e centros padrão, e só cria o `admin@example.com` se ele ainda não existir. Pode ser importado quantas vezes quiser.
+1. No phpMyAdmin, selecione o banco `inlaud99_appfinance`.
+2. Aba **Importar** → escolha `somase_mysql_unico.sql` → **Executar**.
+3. Confira o resultado das consultas finais: 23 tabelas, 9 formas de pagamento, 14 tipos de investimento e a contagem dos seus lançamentos.
+4. Se o phpMyAdmin recusar por tamanho, use `somase_atualizar_banco.sql` (menor e também idempotente) ou o `/_atualizar.php`.

@@ -139,14 +139,16 @@ A validação executada inclui lint de todos os PHP, checagem de sintaxe JavaScr
 O repositório `ASOARESBH/phppadrao` foi usado apenas como origem da base. O desenvolvimento ocorre de forma independente neste repositório `APPFINANCE`; o projeto original não deve ser alterado.
 
 ### Arquivos SQL prontos para importar (`database/sql/`)
-
 | Arquivo | Quando usar | O que faz |
 | --- | --- | --- |
+| **`somase_mysql_unico.sql`** | **qualquer banco (recomendado)** | **arquivo único: cria as tabelas que faltarem, aplica as migrations 0004 a 0007, carrega perfis, permissões, 464 bancos, 17 categorias e 5 centros padrão, cria `payment_methods`/`investment_types` e o `admin@example.com`. Não tem `DROP`, `TRUNCATE` nem `DELETE`: pode ser importado em banco vazio ou em produção com dados, quantas vezes quiser.** |
 | `somase_instalacao_completa.sql` | banco novo ou vazio | cria as 20 tabelas (já com a `0004`), carrega perfis, permissões, categorias e centros de custo padrão e cria `admin@example.com` / `Admin@123`. **Apaga as tabelas existentes.** |
-| `somase_atualizar_banco.sql` | banco que já tem dados (produção) | não apaga nada: consulta o `information_schema` e cria apenas o que falta (colunas novas em `users`, tabelas `user_identities` e `auth_attempts`, permissão `access_admin_panel`). Idempotente, roda em MySQL 5.7+/8 e MariaDB 10.3+ sem procedures. |
+| `somase_atualizar_banco.sql` | banco que já tem dados (produção) | não apaga nada: consulta o `information_schema` e cria apenas o que falta nas migrations 0004 a 0007. Idempotente, roda em MySQL 5.7+/8 e MariaDB 10.3+ sem procedures. |
 | `somase_completo_com_demo.sql` | homologação e testes | dump completo do banco de desenvolvimento (4 usuários de teste, 2 contas, 101 lançamentos, investimentos e logs). **Não usar em produção.** |
 
 Todos terminam com consultas `SELECT` de verificação, então o phpMyAdmin mostra na tela o resultado da importação. Os arquivos são gerados por `tools/build_sql.py` a partir do banco local.
+
+**Na dúvida, use `somase_mysql_unico.sql`.** Ele substitui os dois primeiros: em banco vazio instala tudo; em banco com dados apenas completa o que falta, sem tocar nos registros existentes. Testado em banco vazio, em banco com dados e em banco sem a migration 0007 — nas três situações terminou com 23 tabelas, 9 formas de pagamento e 14 tipos de investimento.
 
 ## Leitura de documentos, imóveis e lançamento em lote (27/11/2026)
 
