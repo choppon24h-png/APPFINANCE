@@ -47,12 +47,42 @@ $codigoAtual = trim((string) ($account->bank_code ?? ''));
 
         <label class="field">
             <span>Tipo de conta</span>
-            <select name="account_type" required>
+            <select name="account_type" required data-account-type>
                 <?php foreach (['checking' => 'Conta corrente', 'savings' => 'Conta poupança', 'investment' => 'Conta investimento', 'cash' => 'Carteira / dinheiro', 'other' => 'Outros'] as $key => $label): ?>
                     <option value="<?= $key ?>" <?= ($account->account_type ?? 'checking') === $key ? 'selected' : '' ?>><?= $label ?></option>
                 <?php endforeach; ?>
             </select>
         </label>
+
+        <div class="field field-wide investment-account-fields" data-investment-fields <?= ($account->account_type ?? 'checking') === 'investment' ? '' : 'hidden' ?>>
+            <div class="form-grid">
+                <label class="field">
+                    <span>Tipo de investimento <em>opcional</em></span>
+                    <select name="investment_type_id">
+                        <option value="">Não informado</option>
+                        <?php foreach (($investmentTypes ?? []) as $type): ?>
+                            <option value="<?= (int) $type->id ?>" <?= ((int) ($account->investment_type_id ?? 0) === (int) $type->id) ? 'selected' : '' ?>><?= htmlspecialchars($type->name) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                    <small class="field-note">Usado para estimar a receita. <a href="/investimentos/tipos">Gerenciar tipos</a>.</small>
+                </label>
+                <label class="field">
+                    <span>Taxa contratada <em>opcional</em></span>
+                    <div class="input-suffix">
+                        <input type="number" name="investment_rate" value="<?= $value('investment_rate') ?>" step="0.000001" min="0" placeholder="Ex.: 110">
+                        <b>%</b>
+                    </div>
+                    <small class="field-note">Percentual do índice (CDB 110% do CDI) ou taxa cheia se prefixado.</small>
+                </label>
+                <label class="field">
+                    <span>Periodicidade da taxa</span>
+                    <select name="investment_rate_period">
+                        <option value="annual" <?= ($account->investment_rate_period ?? 'annual') === 'annual' ? 'selected' : '' ?>>Ao ano</option>
+                        <option value="monthly" <?= ($account->investment_rate_period ?? '') === 'monthly' ? 'selected' : '' ?>>Ao mês</option>
+                    </select>
+                </label>
+            </div>
+        </div>
 
         <?php if (!$editing): ?>
             <label class="field">
@@ -98,3 +128,13 @@ $codigoAtual = trim((string) ($account->bank_code ?? ''));
         <button class="button button-primary" type="submit"><?= $editing ? 'Salvar conta' : 'Cadastrar conta' ?></button>
     </div>
 </form>
+<script>
+(function () {
+    var select = document.querySelector('[data-account-type]');
+    var bloco = document.querySelector('[data-investment-fields]');
+    if (!select || !bloco) return;
+    function atualizar() { bloco.hidden = select.value !== 'investment'; }
+    select.addEventListener('change', atualizar);
+    atualizar();
+})();
+</script>

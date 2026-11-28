@@ -1,3 +1,13 @@
 <?php $money = static fn($value) => 'R$ ' . number_format((float) $value, 2, ',', '.'); ?>
 <section class="form-intro"><a class="back-link" href="/investimentos">‹ Voltar para investimentos</a><span class="eyebrow"><?= htmlspecialchars($investment->institution) ?></span><h2 class="page-heading"><?= htmlspecialchars($investment->name) ?></h2><p class="page-subtitle">Evolução dos rendimentos informados mês a mês.</p></section>
+<?php if (!empty($estimativa) && ($estimativa['available'] ?? false) && $estimativa['monthly_amount'] > 0): ?>
+    <div class="estimate-callout compact">
+        <div>
+            <span class="eyebrow">Estimativa do mês</span>
+            <strong><?= $money($estimativa['monthly_amount']) ?></strong>
+            <small><?= htmlspecialchars($estimativa['method']) ?> · patrimônio de <?= $money($estimativa['principal']) ?></small>
+        </div>
+        <a class="button button-ghost button-small" href="/investimentos/<?= (int) $investment->id ?>/rendimento?estimado=1">Lançar estimado</a>
+    </div>
+<?php endif; ?>
 <section class="panel"><div class="panel-heading"><div><span class="eyebrow">Histórico</span><h3>Rendimentos registrados</h3></div><a href="/investimentos/<?= (int) $investment->id ?>/rendimento" class="button button-primary">+ Registrar rendimento</a></div><?php if (!$returns): ?><div class="empty-state compact"><span class="empty-icon">↗</span><p>Nenhum rendimento foi informado para este investimento.</p></div><?php else: ?><div class="data-table-wrap"><table class="data-table"><thead><tr><th>Período</th><th>Valor inicial</th><th>Rendimento</th><th>Rentabilidade</th><th>Valor final</th></tr></thead><tbody><?php foreach ($returns as $row): ?><tr><td data-label="Período"><strong><?= str_pad((string) $row->reference_month, 2, '0', STR_PAD_LEFT) ?>/<?= (int) $row->reference_year ?></strong></td><td data-label="Valor inicial"><?= $money($row->initial_value) ?></td><td data-label="Rendimento" class="positive"><?= $money($row->return_amount) ?></td><td data-label="Rentabilidade" class="positive"><?= number_format((float) $row->return_percentage, 2, ',', '.') ?>%</td><td data-label="Valor final"><strong><?= $money($row->final_value) ?></strong></td></tr><?php endforeach; ?></tbody></table></div><?php endif; ?></section>

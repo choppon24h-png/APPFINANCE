@@ -6,6 +6,8 @@ use App\Core\Audit\AuditLogger;
 use App\Core\Controller;
 use App\Models\Account;
 use App\Models\Investment;
+use App\Models\InvestmentType;
+use App\Services\InvestmentProjection;
 use App\Services\InvestmentService;
 use App\Support\FinanceInput;
 use Throwable;
@@ -18,15 +20,25 @@ class InvestmentController extends Controller
     {
         $model = new Investment();
         $order = ($_GET['order'] ?? 'absolute') === 'percentage' ? 'percentage' : 'absolute';
+        $investments = $model->forUser($this->userId());
+        $estimativas = [];
+        $totalEstimado = 0.0;
+        foreach ($investments as $investment) {
+            $estimativa = InvestmentProjection::estimate($investment);
+            $estimativas[(int) $investment->id] = $estimativa;
+            if ($investment->status === 'active') $totalEstimado += $estimativa['monthly_amount'];
+        }
         $this->view('investments/index', [
-            'title' => 'Investimentos', 'investments' => $model->forUser($this->userId()),
-            'totals' => $model->totals($this->userId()), 'ranking' => $model->ranked($this->userId(), $order), 'order' => $order,
+            'title' => 'Investimentos', 'investments' => $investments,
+            'totals' => $model->totals($this->userId()), 'ranking' => $model->ranked($this->userId(), $order),
+            'order' => $order, 'estimativas' => $estimativas, 'totalEstimado' => $totalEstimado,
+            'tipos' => (new InvestmentType())->forUser($this->userId(), true),
         ]);
     }
 
     public function create(): void
     {
-        $this->view('investments/form', ['title' => 'Novo investimento', 'accounts' => (new Account())->forUser($this->userId(), true)]);
+        $this->view('investments/form', $this->formData(null));
     }
 
     public function store(): void
@@ -36,6 +48,24 @@ class InvestmentController extends Controller
             AuditLogger::log('create', 'investment', $id);
             $this->flash('success', 'Investimento aplicado e saldo da conta atualizado.');
         } catch (Throwable $e) { $this->flash('error', $e instanceof \InvalidArgumentException ? $e->getMessage() : 'Não foi possível cadastrar o investimento.'); }
+        $this->redirect('/investimentos');
+    }
+
+    public function edit(string $id): void
+    {
+        $investment = (new Investment())->findForUser(FinanceInput::intId($id, 'Investimento', true), $this->userId());
+        if (!$investment) { $this->flash('error', 'Investimento não encontrado.'); $this->redirect('/investimentos'); }
+        $this->view('investments/form', $this->formData($investment));
+    }
+
+    public function update(string $id): void
+    {
+        try {
+            $id = FinanceInput::intId($id, 'Investimento', true);
+            (new InvestmentService())->update($this->userId(), $id, $_POST);
+            AuditLogger::log('update', 'investment', $id);
+            $this->flash('success', 'Investimento atualizado.');
+        } catch (Throwable $e) { $this->flash('error', $e instanceof \InvalidArgumentException ? $e->getMessage() : 'Não foi possível atualizar o investimento.'); }
         $this->redirect('/investimentos');
     }
 
@@ -61,7 +91,13 @@ class InvestmentController extends Controller
     {
         $investment = (new Investment())->findForUser(FinanceInput::intId($id, 'Investimento', true), $this->userId());
         if (!$investment) { $this->flash('error', 'Investimento não encontrado.'); $this->redirect('/investimentos'); }
-        $this->view('investments/return', ['title' => 'Registrar rendimento', 'investment' => $investment]);
+        $estimativa = InvestmentProjection::estimate($investment);
+        $this->view('investments/return', [
+            'title' => 'Registrar rendimento',
+            'investment' => $investment,
+            'estimativa' => $estimativa,
+            'usarEstimativa' => !empty($_GET['estimado']),
+        ]);
     }
 
     public function addReturn(string $id): void
@@ -80,7 +116,23 @@ class InvestmentController extends Controller
         $id = FinanceInput::intId($id, 'Investimento', true); $model = new Investment();
         $investment = $model->findForUser($id, $this->userId());
         if (!$investment) { $this->flash('error', 'Investimento não encontrado.'); $this->redirect('/investimentos'); }
-        $this->view('investments/history', ['title' => 'Histórico de rendimentos', 'investment' => $investment, 'returns' => $model->returnsForUser($id, $this->userId())]);
+        $this->view('investments/history', [
+            'title' => 'Histórico de rendimentos', 'investment' => $investment,
+            'returns' => $model->returnsForUser($id, $this->userId()),
+            'estimativa' => InvestmentProjection::estimate($investment),
+        ]);
+    }
+
+    private function formData(?object $investment): array
+    {
+        return [
+            'title' => $investment ? 'Editar investimento' : 'Novo investimento',
+            'investment' => $investment,
+            'accounts' => (new Account())->forUser($this->userId(), true),
+            'investmentTypes' => (new InvestmentType())->forUser($this->userId(), true),
+            'referenceRates' => InvestmentType::REFERENCE_RATES,
+            'benchmarkLabels' => InvestmentType::BENCHMARKS,
+        ];
     }
 
     private function flash(string $type, string $message): void { $_SESSION['flash'] = ['type' => $type, 'message' => $message]; }

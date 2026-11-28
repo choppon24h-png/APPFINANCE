@@ -5,8 +5,8 @@ use App\Core\Database;
 use App\Models\Account;
 use App\Models\AccountMovement;
 use App\Models\Investment;
+use App\Models\InvestmentType;
 use App\Support\FinanceInput;
-use DateTimeImmutable;
 use InvalidArgumentException;
 
 class InvestmentService
@@ -30,14 +30,18 @@ class InvestmentService
         if (!$this->accounts->findForUser($accountId, $userId)) throw new InvalidArgumentException('Conta inválida.');
         $applicationDate = FinanceInput::date($input['application_date'] ?? date('Y-m-d'), 'Data da aplicação', true);
         $amount = FinanceInput::amount($input['amount_invested'] ?? null, 'Valor aplicado');
+        $tipo = $this->investmentType($userId, $input);
         $data = [
             'user_id' => $userId, 'account_id' => $accountId,
             'institution' => FinanceInput::text($input['institution'] ?? null, 'Instituição', 120),
-            'investment_type' => FinanceInput::text($input['investment_type'] ?? 'Outros', 'Tipo de investimento', 80),
+            'investment_type' => $tipo['name'],
+            'investment_type_id' => $tipo['id'],
             'name' => FinanceInput::text($input['name'] ?? null, 'Nome do investimento', 150), 'amount_invested' => $amount,
             'application_date' => $applicationDate, 'interest_rate' => $this->nullableDecimal($input['interest_rate'] ?? null),
             'rate_type' => FinanceInput::text($input['rate_type'] ?? null, 'Tipo de rentabilidade', 40, false),
             'benchmark' => FinanceInput::text($input['benchmark'] ?? null, 'Benchmark', 80, false),
+            'benchmark_rate' => $this->nullableDecimal($input['benchmark_rate'] ?? null),
+            'rate_period' => FinanceInput::enum($input['rate_period'] ?? 'annual', 'Periodicidade da taxa', ['annual', 'monthly'], 'annual'),
             'liquidity' => FinanceInput::text($input['liquidity'] ?? null, 'Liquidez', 80, false),
             'maturity_date' => FinanceInput::date($input['maturity_date'] ?? null, 'Data de vencimento', false),
             'status' => FinanceInput::enum($input['status'] ?? 'active', 'Status', ['active','inactive','matured'], 'active'),
@@ -54,6 +58,32 @@ class InvestmentService
             if ($this->pdo->inTransaction()) $this->pdo->rollBack();
             throw $e;
         }
+    }
+
+    public function update(int $userId, int $investmentId, array $input): bool
+    {
+        $investment = $this->investments->findForUser($investmentId, $userId);
+        if (!$investment) throw new InvalidArgumentException('Investimento não encontrado.');
+        $accountId = FinanceInput::intId($input['account_id'] ?? $investment->account_id, 'Conta', true);
+        if (!$this->accounts->findForUser($accountId, $userId)) throw new InvalidArgumentException('Conta inválida.');
+        $tipo = $this->investmentType($userId, $input, $investment);
+        $data = [
+            'account_id' => $accountId,
+            'institution' => FinanceInput::text($input['institution'] ?? $investment->institution, 'Instituição', 120),
+            'investment_type' => $tipo['name'],
+            'investment_type_id' => $tipo['id'],
+            'name' => FinanceInput::text($input['name'] ?? $investment->name, 'Nome do investimento', 150),
+            'interest_rate' => $this->nullableDecimal($input['interest_rate'] ?? null),
+            'rate_type' => FinanceInput::text($input['rate_type'] ?? null, 'Tipo de rentabilidade', 40, false),
+            'benchmark' => FinanceInput::text($input['benchmark'] ?? null, 'Benchmark', 80, false),
+            'benchmark_rate' => $this->nullableDecimal($input['benchmark_rate'] ?? null),
+            'rate_period' => FinanceInput::enum($input['rate_period'] ?? 'annual', 'Periodicidade da taxa', ['annual', 'monthly'], 'annual'),
+            'liquidity' => FinanceInput::text($input['liquidity'] ?? null, 'Liquidez', 80, false),
+            'maturity_date' => FinanceInput::date($input['maturity_date'] ?? null, 'Data de vencimento', false),
+            'status' => FinanceInput::enum($input['status'] ?? 'active', 'Status', ['active','inactive','matured'], 'active'),
+            'notes' => FinanceInput::text($input['notes'] ?? null, 'Observações', 2000, false),
+        ];
+        return $this->investments->update($investmentId, $userId, $data);
     }
 
     public function redeem(int $userId, int $investmentId, array $input): void
@@ -91,6 +121,30 @@ class InvestmentService
             'investment_id' => $investmentId, 'reference_month' => $month, 'reference_year' => $year,
             'initial_value' => $initial, 'return_amount' => $returnAmount, 'return_percentage' => $percentage, 'final_value' => $final,
         ]);
+    }
+
+    /**
+     * Resolve o tipo de investimento escolhido no catálogo. Quando o campo
+     * investment_type_id vem vazio, aceita o texto livre antigo.
+     *
+     * @return array{id:?int,name:string}
+     */
+    private function investmentType(int $userId, array $input, ?object $atual = null): array
+    {
+        $id = FinanceInput::intId($input['investment_type_id'] ?? null, 'Tipo de investimento');
+        if ($id !== null) {
+            $tipo = (new InvestmentType())->findForUser($id, $userId);
+            if (!$tipo) throw new InvalidArgumentException('Tipo de investimento inválido.');
+            return ['id' => (int) $tipo->id, 'name' => $tipo->name];
+        }
+        $texto = trim((string) ($input['investment_type'] ?? ''));
+        if ($texto !== '') {
+            return ['id' => null, 'name' => mb_substr($texto, 0, 80)];
+        }
+        if ($atual) {
+            return ['id' => $atual->investment_type_id ?? null, 'name' => $atual->investment_type];
+        }
+        return ['id' => null, 'name' => 'Outros'];
     }
 
     private function nullableDecimal(mixed $value): ?float

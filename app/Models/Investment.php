@@ -11,12 +11,14 @@ class Investment extends Model
     public function forUser(int $userId): array
     {
         $stmt = $this->pdo->prepare(
-            "SELECT i.*, a.name AS account_name,
+            "SELECT i.*, a.name AS account_name, t.name AS type_name, t.benchmark AS type_benchmark,
                 COALESCE((SELECT SUM(CASE WHEN m.type IN ('income','adjustment') THEN m.amount WHEN m.type = 'redemption' THEN -m.amount ELSE 0 END)
                     FROM investment_movements m WHERE m.investment_id = i.id), 0) AS movement_result,
                 COALESCE((SELECT SUM(r.return_amount) FROM investment_returns r WHERE r.investment_id = i.id), 0) AS accumulated_return,
                 COALESCE((SELECT SUM(r.return_percentage) FROM investment_returns r WHERE r.investment_id = i.id), 0) AS accumulated_rate
-             FROM investments i JOIN accounts a ON a.id = i.account_id AND a.user_id = i.user_id
+             FROM investments i
+             JOIN accounts a ON a.id = i.account_id AND a.user_id = i.user_id
+             LEFT JOIN investment_types t ON t.id = i.investment_type_id
              WHERE i.user_id = :user_id ORDER BY i.status = 'active' DESC, accumulated_return DESC, i.name ASC"
         );
         $stmt->execute(['user_id' => $userId]);
@@ -26,8 +28,10 @@ class Investment extends Model
     public function findForUser(int $id, int $userId): ?object
     {
         $stmt = $this->pdo->prepare(
-            'SELECT i.*, a.name AS account_name FROM investments i
+            'SELECT i.*, a.name AS account_name, t.name AS type_name, t.benchmark AS type_benchmark
+             FROM investments i
              JOIN accounts a ON a.id = i.account_id AND a.user_id = i.user_id
+             LEFT JOIN investment_types t ON t.id = i.investment_type_id
              WHERE i.id = :id AND i.user_id = :user_id LIMIT 1'
         );
         $stmt->execute(['id' => $id, 'user_id' => $userId]);
@@ -38,13 +42,25 @@ class Investment extends Model
     public function create(array $data): int
     {
         $stmt = $this->pdo->prepare(
-            'INSERT INTO investments (user_id, account_id, institution, investment_type, name,
-             amount_invested, application_date, interest_rate, rate_type, benchmark, liquidity,
-             maturity_date, status, notes)
-             VALUES (:user_id, :account_id, :institution, :investment_type, :name, :amount_invested,
-             :application_date, :interest_rate, :rate_type, :benchmark, :liquidity, :maturity_date, :status, :notes)'
+            'INSERT INTO investments (user_id, account_id, institution, investment_type, investment_type_id,
+             name, amount_invested, application_date, interest_rate, rate_type, benchmark, benchmark_rate,
+             rate_period, liquidity, maturity_date, status, notes)
+             VALUES (:user_id, :account_id, :institution, :investment_type, :investment_type_id,
+             :name, :amount_invested, :application_date, :interest_rate, :rate_type,
+             :benchmark, :benchmark_rate, :rate_period, :liquidity, :maturity_date, :status, :notes)'
         );
-        $stmt->execute($data);
+        // Mantem a ordem explicita para nao depender da ordem do array.
+        $stmt->execute([
+            'user_id' => $data['user_id'], 'account_id' => $data['account_id'],
+            'institution' => $data['institution'], 'investment_type' => $data['investment_type'],
+            'investment_type_id' => $data['investment_type_id'] ?? null, 'name' => $data['name'],
+            'amount_invested' => $data['amount_invested'], 'application_date' => $data['application_date'],
+            'interest_rate' => $data['interest_rate'] ?? null, 'rate_type' => $data['rate_type'] ?? null,
+            'benchmark' => $data['benchmark'] ?? null, 'benchmark_rate' => $data['benchmark_rate'] ?? null,
+            'rate_period' => $data['rate_period'] ?? 'annual', 'liquidity' => $data['liquidity'] ?? null,
+            'maturity_date' => $data['maturity_date'] ?? null, 'status' => $data['status'] ?? 'active',
+            'notes' => $data['notes'] ?? null,
+        ]);
         return (int) $this->pdo->lastInsertId();
     }
 
@@ -52,13 +68,24 @@ class Investment extends Model
     {
         $stmt = $this->pdo->prepare(
             'UPDATE investments SET account_id = :account_id, institution = :institution,
-             investment_type = :investment_type, name = :name, interest_rate = :interest_rate,
-             rate_type = :rate_type, benchmark = :benchmark, liquidity = :liquidity,
+             investment_type = :investment_type, investment_type_id = :investment_type_id,
+             name = :name, interest_rate = :interest_rate,
+             rate_type = :rate_type, benchmark = :benchmark, benchmark_rate = :benchmark_rate,
+             rate_period = :rate_period, liquidity = :liquidity,
              maturity_date = :maturity_date, status = :status, notes = :notes
              WHERE id = :id AND user_id = :user_id'
         );
         $data['id'] = $id; $data['user_id'] = $userId;
-        return $stmt->execute($data);
+        return $stmt->execute([
+            'id' => $id, 'user_id' => $userId, 'account_id' => $data['account_id'],
+            'institution' => $data['institution'], 'investment_type' => $data['investment_type'],
+            'investment_type_id' => $data['investment_type_id'] ?? null, 'name' => $data['name'],
+            'interest_rate' => $data['interest_rate'] ?? null, 'rate_type' => $data['rate_type'] ?? null,
+            'benchmark' => $data['benchmark'] ?? null, 'benchmark_rate' => $data['benchmark_rate'] ?? null,
+            'rate_period' => $data['rate_period'] ?? 'annual', 'liquidity' => $data['liquidity'] ?? null,
+            'maturity_date' => $data['maturity_date'] ?? null, 'status' => $data['status'] ?? 'active',
+            'notes' => $data['notes'] ?? null,
+        ]);
     }
 
     public function addMovement(array $data): int

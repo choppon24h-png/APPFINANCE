@@ -31,8 +31,10 @@ class Account extends Model
         $stmt = $this->pdo->prepare(
             'INSERT INTO accounts
                 (user_id, name, bank_name, bank_code, account_type, agency, account_number,
+                 investment_type_id, investment_rate, investment_rate_period,
                  initial_balance, current_balance, initial_date, status, notes)
              VALUES (:user_id, :name, :bank_name, :bank_code, :account_type, :agency, :account_number,
+                     :investment_type_id, :investment_rate, :investment_rate_period,
                      :initial_balance, :current_balance, :initial_date, :status, :notes)'
         );
         $stmt->execute([
@@ -43,6 +45,9 @@ class Account extends Model
             'account_type' => $data['account_type'],
             'agency' => $data['agency'],
             'account_number' => $data['account_number'],
+            'investment_type_id' => $data['investment_type_id'] ?? null,
+            'investment_rate' => $data['investment_rate'] ?? null,
+            'investment_rate_period' => $data['investment_rate_period'] ?? 'annual',
             'initial_balance' => $data['initial_balance'],
             'current_balance' => $data['initial_balance'],
             'initial_date' => $data['initial_date'],
@@ -56,7 +61,10 @@ class Account extends Model
     {
         $stmt = $this->pdo->prepare(
             'UPDATE accounts SET name = :name, bank_name = :bank_name, bank_code = :bank_code, account_type = :account_type,
-                agency = :agency, account_number = :account_number, status = :status, notes = :notes
+                agency = :agency, account_number = :account_number,
+                investment_type_id = :investment_type_id, investment_rate = :investment_rate,
+                investment_rate_period = :investment_rate_period,
+                status = :status, notes = :notes
              WHERE id = :id AND user_id = :user_id'
         );
         return $stmt->execute([
@@ -64,9 +72,13 @@ class Account extends Model
             'user_id' => $userId,
             'name' => $data['name'],
             'bank_name' => $data['bank_name'],
+            'bank_code' => $data['bank_code'] ?? null,
             'account_type' => $data['account_type'],
             'agency' => $data['agency'],
             'account_number' => $data['account_number'],
+            'investment_type_id' => $data['investment_type_id'] ?? null,
+            'investment_rate' => $data['investment_rate'] ?? null,
+            'investment_rate_period' => $data['investment_rate_period'] ?? 'annual',
             'status' => $data['status'],
             'notes' => $data['notes'],
         ]);

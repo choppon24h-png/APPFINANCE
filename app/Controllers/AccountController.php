@@ -5,6 +5,7 @@ use App\Core\Auth;
 use App\Core\Audit\AuditLogger;
 use App\Core\Controller;
 use App\Models\Account;
+use App\Models\InvestmentType;
 use App\Support\FinanceInput;
 use Throwable;
 
@@ -19,7 +20,10 @@ class AccountController extends Controller
 
     public function create(): void
     {
-        $this->view('accounts/form', ['title' => 'Nova conta', 'account' => null]);
+        $this->view('accounts/form', [
+            'title' => 'Nova conta', 'account' => null,
+            'investmentTypes' => (new InvestmentType())->forUser($this->userId(), true),
+        ]);
     }
 
     public function store(): void
@@ -37,7 +41,10 @@ class AccountController extends Controller
     {
         $account = (new Account())->findForUser(FinanceInput::intId($id, 'Conta', true), $this->userId());
         if (!$account) { $this->flash('error', 'Conta não encontrada.'); $this->redirect('/contas'); }
-        $this->view('accounts/form', ['title' => 'Editar conta', 'account' => $account]);
+        $this->view('accounts/form', [
+            'title' => 'Editar conta', 'account' => $account,
+            'investmentTypes' => (new InvestmentType())->forUser($this->userId(), true),
+        ]);
     }
 
     public function update(string $id): void
@@ -60,6 +67,10 @@ class AccountController extends Controller
             (new Account())->update($id, $this->userId(), [
                 'name' => $account->name, 'bank_name' => $account->bank_name, 'account_type' => $account->account_type,
                 'agency' => $account->agency, 'account_number' => $account->account_number,
+                'bank_code' => $account->bank_code ?? null,
+                'investment_type_id' => $account->investment_type_id ?? null,
+                'investment_rate' => $account->investment_rate ?? null,
+                'investment_rate_period' => $account->investment_rate_period ?? 'annual',
                 'status' => $account->status === 'active' ? 'inactive' : 'active', 'notes' => $account->notes,
             ]);
             AuditLogger::log('status', 'account', $id);
@@ -90,12 +101,35 @@ class AccountController extends Controller
             'account_number' => FinanceInput::text($input['account_number'] ?? null, 'Número da conta', 80, false),
             'status' => FinanceInput::enum($input['status'] ?? 'active', 'Status', ['active','inactive'], 'active'),
             'notes' => FinanceInput::text($input['notes'] ?? null, 'Observações', 2000, false),
+            'investment_type_id' => null,
+            'investment_rate' => null,
+            'investment_rate_period' => 'annual',
         ];
+        if ($data['account_type'] === 'investment') {
+            $tipoId = FinanceInput::intId($input['investment_type_id'] ?? null, 'Tipo de investimento');
+            if ($tipoId) {
+                if (!(new InvestmentType())->findForUser($tipoId, $this->userId())) {
+                    throw new \InvalidArgumentException('Tipo de investimento inválido.');
+                }
+                $data['investment_type_id'] = $tipoId;
+            }
+            $data['investment_rate'] = $this->nullableDecimal($input['investment_rate'] ?? null);
+            $data['investment_rate_period'] = FinanceInput::enum($input['investment_rate_period'] ?? 'annual', 'Periodicidade', ['annual','monthly'], 'annual');
+        }
         if ($withInitial) {
             $data['initial_balance'] = FinanceInput::nonNegativeAmount($input['initial_balance'] ?? 0, 'Saldo inicial');
             $data['initial_date'] = FinanceInput::date($input['initial_date'] ?? date('Y-m-d'), 'Data do saldo inicial', true);
         }
         return $data;
+    }
+
+    private function nullableDecimal(mixed $value): ?float
+    {
+        $raw = trim((string) ($value ?? ''));
+        if ($raw === '') return null;
+        $raw = str_replace(',', '.', $raw);
+        if (!is_numeric($raw)) throw new \InvalidArgumentException('Taxa inválida.');
+        return round((float) $raw, 6);
     }
 
     /**
