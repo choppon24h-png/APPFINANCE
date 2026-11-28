@@ -193,3 +193,8 @@ Vá em `https://seu-dominio.com.br/login`.
 4. Não há variável de ambiente nova obrigatória. A ordem dos provedores de CEP é fixa (ViaCEP → BrasilAPI → OpenCEP) e não exige chave. As taxas de referência (CDI/Selic 10,65% a.a., IPCA 4,50% a.a.) ficam em `app/Models/InvestmentType.php` (`REFERENCE_RATES`) para ajuste manual quando o Copom mudar.
 5. Teste em produção, nesta ordem: `/centros-custo` (digitar `01310-100` e conferir rua/bairro/cidade/UF); `/lancamentos` (deve abrir com o chip "Mostrando apenas débitos de…" e cinco cartões); `/lancamentos/novo` (digitar minúsculas e conferir que grava em MAIÚSCULA, e ver "DÉBITO EM CONTA" na lista); `/formas-pagamento`; `/investimentos/tipos`; `/investimentos` (botão "Lançar estimado").
 6. Se o sistema mostrar 503 "Banco de dados precisa ser atualizado", a 0007 ainda não foi importada — importe e recarregue. Nada é perdido: a migration só adiciona colunas/tabelas e semeia catálogos.
+## Se a tela mostrar 503 "Banco de dados inconsistente"
+1. Isso significa que o código novo está no ar e falta uma migration (ex.: `payment_methods` da 0007). Nenhum dado foi apagado por isso.
+2. Abra `/_atualizar.php` logado como administrador e clique em **Aplicar migrations pendentes**. Ele detecta 0004, 0005, 0006 e 0007 e executa só o que falta.
+3. Confira a seção **Seus dados**. Se contas e lançamentos estiverem zerados, o banco foi recriado (uso indevido de `somase_instalacao_completa.sql`): restaure o backup do cPanel antes de continuar.
+4. Enquanto a migration não for aplicada, o sistema segue no ar com o aviso "Banco desatualizado" no topo e as formas de pagamento antigas.

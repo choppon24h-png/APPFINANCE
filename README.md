@@ -224,3 +224,15 @@ OCR_SPACE_ENGINE=2
 php tests/DocumentsTest.php      # 62 verificações, sem banco
 bash tools/validar_tudo.sh       # PHP, JS, paridade SQL e smoke test
 ```
+
+## Solução de problemas: 503 "Banco de dados inconsistente"
+
+Se aparecer `Table '...payment_methods' doesn't exist` (ou qualquer tabela/coluna da 0006/0007), o código novo chegou ao servidor antes da migration. **Os dados existentes não são afetados**: falta apenas a estrutura nova.
+
+1. Abra `/_atualizar.php` logado como administrador (ou informe o `APP_SECRET`). A tela lista as migrations 0004 a 0007 com o status de cada uma e o que exatamente falta.
+2. Clique em **Aplicar migrations pendentes**. O atualizador executa somente o que está faltando, na ordem correta, sem apagar nada.
+3. Confira a seção **Seus dados**: ela mostra a contagem de usuários, contas, lançamentos, centros de custo, investimentos e catálogos. Se `transactions` e `accounts` estiverem zerados, o banco foi recriado — nesse caso, restaure o backup mais recente pelo cPanel (Arquivos → Backup) e depois aplique a migration.
+
+Enquanto a migration não é aplicada, o sistema continua abrindo: o layout mostra o aviso **"Banco desatualizado"** no topo e os catálogos usam a lista antiga de formas de pagamento em vez de derrubar a página.
+
+**Nunca use `database/sql/somase_instalacao_completa.sql` para atualizar um banco com dados** — esse arquivo apaga todas as tabelas antes de criar. Para atualizar, use a migration da rodada ou `somase_atualizar_banco.sql`.
