@@ -29,6 +29,10 @@ class Transaction extends Model
                 $params[$field] = (int) $filters[$field];
             }
         }
+        if (!empty($filters['center_kind'])) {
+            $where[] = 'cc.kind = :center_kind';
+            $params['center_kind'] = (string) $filters['center_kind'];
+        }
         if (!empty($filters['date_from'])) {
             $where[] = 't.transaction_date >= :date_from';
             $params['date_from'] = $filters['date_from'];
@@ -48,7 +52,7 @@ class Transaction extends Model
         $params['limit'] = $perPage;
         $params['offset'] = ($page - 1) * $perPage;
         $stmt = $this->pdo->prepare(
-            "SELECT t.*, a.name AS account_name, c.name AS category_name, cc.name AS cost_center_name
+            "SELECT t.*, a.name AS account_name, c.name AS category_name, cc.name AS cost_center_name, cc.kind AS cost_center_kind
              FROM transactions t
              JOIN accounts a ON a.id = t.account_id AND a.user_id = t.user_id
              LEFT JOIN categories c ON c.id = t.category_id
@@ -68,7 +72,7 @@ class Transaction extends Model
     {
         [$where, $params] = $this->filters($userId, $filters);
         $stmt = $this->pdo->prepare(
-            "SELECT t.*, a.name AS account_name, c.name AS category_name, cc.name AS cost_center_name
+            "SELECT t.*, a.name AS account_name, c.name AS category_name, cc.name AS cost_center_name, cc.kind AS cost_center_kind
              FROM transactions t
              JOIN accounts a ON a.id = t.account_id AND a.user_id = t.user_id
              LEFT JOIN categories c ON c.id = t.category_id
@@ -83,7 +87,9 @@ class Transaction extends Model
     public function countForUser(int $userId, array $filters): int
     {
         [$where, $params] = $this->filters($userId, $filters);
-        $stmt = $this->pdo->prepare("SELECT COUNT(*) FROM transactions t WHERE {$where}");
+        $stmt = $this->pdo->prepare(
+            "SELECT COUNT(*) FROM transactions t LEFT JOIN cost_centers cc ON cc.id = t.cost_center_id WHERE {$where}"
+        );
         $stmt->execute($params);
         return (int) $stmt->fetchColumn();
     }
@@ -91,7 +97,7 @@ class Transaction extends Model
     public function findForUser(int $id, int $userId): ?object
     {
         $stmt = $this->pdo->prepare(
-            'SELECT t.*, a.name AS account_name, c.name AS category_name, cc.name AS cost_center_name
+            'SELECT t.*, a.name AS account_name, c.name AS category_name, cc.name AS cost_center_name, cc.kind AS cost_center_kind
              FROM transactions t
              JOIN accounts a ON a.id = t.account_id AND a.user_id = t.user_id
              LEFT JOIN categories c ON c.id = t.category_id
@@ -105,14 +111,19 @@ class Transaction extends Model
 
     public function create(array $data): int
     {
+        // Campos novos (migration 0006) sao opcionais para nao quebrar
+        // chamadas antigas (recorrencia, transferencia, importacao).
+        $data += ['document_code' => null, 'import_ref' => null, 'attachment_path' => null];
         $stmt = $this->pdo->prepare(
             'INSERT INTO transactions
              (user_id, account_id, category_id, cost_center_id, type, description, amount,
               transaction_date, due_date, payment_date, status, payment_method, notes,
-              recurrence_id, recurrence_key, transfer_id)
+              recurrence_id, recurrence_key, transfer_id,
+              document_code, import_ref, attachment_path)
              VALUES (:user_id, :account_id, :category_id, :cost_center_id, :type, :description, :amount,
               :transaction_date, :due_date, :payment_date, :status, :payment_method, :notes,
-              :recurrence_id, :recurrence_key, :transfer_id)'
+              :recurrence_id, :recurrence_key, :transfer_id,
+              :document_code, :import_ref, :attachment_path)'
         );
         $stmt->execute($data);
         return (int) $this->pdo->lastInsertId();
@@ -120,17 +131,81 @@ class Transaction extends Model
 
     public function update(int $id, int $userId, array $data): bool
     {
+        // document_code e attachment_path so entram no UPDATE quando vieram
+        // no POST (evita apagar o codigo lido ou o anexo em uma edicao rapida).
+        $extra = '';
+        if (array_key_exists('document_code', $data)) {
+            $extra .= ', document_code = :document_code';
+        }
+        if (array_key_exists('attachment_path', $data)) {
+            $extra .= ', attachment_path = :attachment_path';
+        } else {
+            unset($data['attachment_path']);
+        }
+        if (!array_key_exists('document_code', $data)) {
+            unset($data['document_code']);
+        }
         $stmt = $this->pdo->prepare(
             'UPDATE transactions SET account_id = :account_id, category_id = :category_id,
               cost_center_id = :cost_center_id, type = :type, description = :description,
               amount = :amount, transaction_date = :transaction_date, due_date = :due_date,
               payment_date = :payment_date, status = :status, payment_method = :payment_method,
-              notes = :notes
+              notes = :notes' . $extra . '
              WHERE id = :id AND user_id = :user_id'
         );
         $data['id'] = $id;
         $data['user_id'] = $userId;
         return $stmt->execute($data);
+    }
+
+    /** Referencia unica da linha importada (OFX/CSV). */
+    public function setImportRef(int $id, int $userId, ?string $ref): bool
+    {
+        $stmt = $this->pdo->prepare('UPDATE transactions SET import_ref = :r WHERE id = :id AND user_id = :u');
+        return $stmt->execute(['r' => $ref, 'id' => $id, 'u' => $userId]);
+    }
+
+    /** Grava (ou limpa, com null) o caminho do anexo do lancamento. */
+    public function setAttachment(int $id, int $userId, ?string $path): bool
+    {
+        $stmt = $this->pdo->prepare('UPDATE transactions SET attachment_path = :p WHERE id = :id AND user_id = :u');
+        return $stmt->execute(['p' => $path, 'id' => $id, 'u' => $userId]);
+    }
+
+    /** Ja existe lancamento do usuario com este codigo de documento? */
+    public function existsDocumentCode(int $userId, string $code): bool
+    {
+        $stmt = $this->pdo->prepare('SELECT 1 FROM transactions WHERE user_id = :u AND document_code = :c LIMIT 1');
+        $stmt->execute(['u' => $userId, 'c' => $code]);
+        return (bool) $stmt->fetchColumn();
+    }
+
+    /** Referencias de importacao ja usadas (deduplicacao do lote). */
+    public function existingImportRefs(int $userId, int $accountId, array $refs): array
+    {
+        $refs = array_values(array_filter($refs));
+        if (!$refs) {
+            return [];
+        }
+        $in = implode(',', array_fill(0, count($refs), '?'));
+        $stmt = $this->pdo->prepare(
+            "SELECT import_ref FROM transactions WHERE user_id = ? AND account_id = ? AND import_ref IN ({$in})"
+        );
+        $stmt->execute(array_merge([$userId, $accountId], $refs));
+        return $stmt->fetchAll(\PDO::FETCH_COLUMN) ?: [];
+    }
+
+    /** Lancamento parecido (mesma conta, data e valor) para avisar duplicidade. */
+    public function findSimilar(int $userId, int $accountId, string $date, float $amount): ?object
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT id, description, transaction_date, amount FROM transactions
+             WHERE user_id = :u AND account_id = :a AND transaction_date = :d AND amount = :v
+             LIMIT 1'
+        );
+        $stmt->execute(['u' => $userId, 'a' => $accountId, 'd' => $date, 'v' => $amount]);
+        $row = $stmt->fetch();
+        return $row ?: null;
     }
 
     public function delete(int $id, int $userId): bool

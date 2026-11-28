@@ -4,10 +4,12 @@ namespace App\Controllers;
 use App\Core\Auth;
 use App\Core\Audit\AuditLogger;
 use App\Core\Controller;
+use App\Core\Logger;
 use App\Models\Account;
 use App\Models\Category;
 use App\Models\CostCenter;
 use App\Models\Transaction;
+use App\Services\Documents\AttachmentStorage;
 use App\Services\FinanceService;
 use App\Support\FinanceInput;
 use Throwable;
@@ -19,7 +21,7 @@ class TransactionController extends Controller
     public function index(): void
     {
         $filters = [];
-        foreach (['search','type','status','date_from','date_to'] as $key) {
+        foreach (['search','type','status','date_from','date_to','center_kind'] as $key) {
             if (!empty($_GET[$key])) $filters[$key] = trim((string) $_GET[$key]);
         }
         foreach (['account_id','category_id','cost_center_id'] as $key) {
@@ -47,6 +49,7 @@ class TransactionController extends Controller
     {
         try {
             $id = (new FinanceService())->createTransaction($this->userId(), $_POST);
+            $this->processAttachment($id);
             AuditLogger::log('create', 'transaction', $id, ['type' => $_POST['type'] ?? null]);
             $this->flash('success', 'Lançamento salvo com sucesso.');
             $this->redirect('/lancamentos');
@@ -68,6 +71,7 @@ class TransactionController extends Controller
         try {
             $id = FinanceInput::intId($id, 'Lançamento', true);
             (new FinanceService())->updateTransaction($this->userId(), $id, $_POST);
+            $this->processAttachment($id, true);
             AuditLogger::log('update', 'transaction', $id);
             $this->flash('success', 'Lançamento atualizado.');
         } catch (Throwable $e) {
@@ -80,7 +84,9 @@ class TransactionController extends Controller
     {
         try {
             $id = FinanceInput::intId($id, 'Lançamento', true);
+            $anexo = (new Transaction())->findForUser($id, $this->userId())?->attachment_path;
             if ((new FinanceService())->deleteTransaction($this->userId(), $id)) {
+                if ($anexo) (new AttachmentStorage())->delete($anexo);
                 AuditLogger::log('delete', 'transaction', $id);
                 $this->flash('success', 'Lançamento excluído.');
             } else $this->flash('error', 'Lançamento não encontrado.');
@@ -132,6 +138,36 @@ class TransactionController extends Controller
             'categories' => (new Category())->forUser($this->userId(), null, true),
             'costCenters' => (new CostCenter())->forUser($this->userId(), true),
         ];
+    }
+
+    /** Envia/troca/remove o anexo do lancamento (falha nao desfaz o lancamento). */
+    private function processAttachment(int $id, bool $isUpdate = false): void
+    {
+        $model = new Transaction();
+        $storage = new AttachmentStorage();
+        $atual = $model->findForUser($id, $this->userId());
+        if (!$atual) {
+            return;
+        }
+        $path = $atual->attachment_path ?? null;
+        if ($isUpdate && !empty($_POST['remove_attachment']) && $path) {
+            $storage->delete($path);
+            $model->setAttachment($id, $this->userId(), null);
+            $path = null;
+        }
+        if (empty($_FILES['attachment']['name'])) {
+            return;
+        }
+        try {
+            $novo = $storage->save($this->userId(), $_FILES['attachment']);
+            if ($path) {
+                $storage->delete($path);
+            }
+            $model->setAttachment($id, $this->userId(), $novo);
+        } catch (Throwable $e) {
+            Logger::warning('lancamento.anexo', ['id' => $id, 'erro' => $e->getMessage()]);
+            $this->flash('warning', 'Lançamento salvo, mas o anexo não foi enviado: ' . $e->getMessage());
+        }
     }
 
     private function flash(string $type, string $message): void

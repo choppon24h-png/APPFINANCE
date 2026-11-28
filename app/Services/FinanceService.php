@@ -62,6 +62,7 @@ class FinanceService
                 'payment_date' => $data['payment_date'], 'status' => $data['status'], 'payment_method' => $data['payment_method'],
                 'notes' => $data['notes'], 'recurrence_id' => $recurrenceId,
                 'recurrence_key' => $recurrenceId ? $recurrenceId . ':' . $data['transaction_date'] : null, 'transfer_id' => null,
+                'document_code' => $data['document_code'] ?: null, 'import_ref' => null, 'attachment_path' => null,
             ];
             $transactionId = $this->transactions->create($transactionData);
             $this->applyTransactionMovement($transactionId, $data);
@@ -86,12 +87,18 @@ class FinanceService
         $this->pdo->beginTransaction();
         try {
             $this->accountMovements->removeForTransaction((int) $old->account_id, $id);
-            $ok = $this->transactions->update($id, $userId, [
+            $atualizacao = [
                 'account_id' => $data['account_id'], 'category_id' => $data['category_id'], 'cost_center_id' => $data['cost_center_id'],
                 'type' => $data['type'], 'description' => $data['description'], 'amount' => $data['amount'],
                 'transaction_date' => $data['transaction_date'], 'due_date' => $data['due_date'], 'payment_date' => $data['payment_date'],
                 'status' => $data['status'], 'payment_method' => $data['payment_method'], 'notes' => $data['notes'],
-            ]);
+            ];
+            // So grava document_code quando o campo veio no POST (evita apagar
+            // o codigo lido do boleto em uma edicao que nao exibe o campo).
+            if (array_key_exists('document_code', $input)) {
+                $atualizacao['document_code'] = $data['document_code'] ?: null;
+            }
+            $ok = $this->transactions->update($id, $userId, $atualizacao);
             $data['recurrence_id'] = $old->recurrence_id;
             $this->applyTransactionMovement($id, $data);
             $this->pdo->commit();
@@ -207,6 +214,7 @@ class FinanceService
             'payment_date' => FinanceInput::date($input['payment_date'] ?? null, 'Data de pagamento', false),
             'payment_method' => FinanceInput::nullableEnum($input['payment_method'] ?? null, 'Forma de pagamento', ['pix','debit','credit','boleto','cash','transfer','other']),
             'notes' => FinanceInput::text($input['notes'] ?? null, 'Observação', 2000, false), 'frequency' => $frequency, 'end_date' => $endDate,
+            'document_code' => FinanceInput::text($input['document_code'] ?? null, 'Código do documento', 64, false),
         ];
     }
 

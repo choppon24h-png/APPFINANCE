@@ -57,6 +57,13 @@ Router::group([
     Router::get('/lancamentos', 'TransactionController@index');
     Router::get('/lancamentos/novo', 'TransactionController@create');
     Router::post('/lancamentos', 'TransactionController@store');
+    // Leitura de documentos e anexos (boletos, contas, cupons)
+    Router::post('/lancamentos/ler-documento', 'DocumentController@read');
+    Router::post('/lancamentos/ler-documento/ocr', 'DocumentController@ocr');
+    Router::get('/lancamentos/importar', 'ImportController@form');
+    Router::post('/lancamentos/importar/extrato', 'ImportController@preview');
+    Router::post('/lancamentos/importar/confirmar', 'ImportController@confirm');
+    Router::get('/lancamentos/{id}/anexo', 'DocumentController@attachment');
     Router::get('/lancamentos/{id}/editar', 'TransactionController@edit');
     Router::post('/lancamentos/{id}/atualizar', 'TransactionController@update');
     Router::post('/lancamentos/{id}/excluir', 'TransactionController@destroy');

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'somase-static-v5';
+const CACHE_NAME = 'somase-static-v6';
 const STATIC_ASSETS = [
     '/assets/css/app.css',
     '/assets/js/app.js',
